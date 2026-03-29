@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = "http://localhost:8001/api";
+const BASE_URL = "https://hospital-management-system-wlog.onrender.com/api";
 
 const api = axios.create({
   baseURL: BASE_URL,
