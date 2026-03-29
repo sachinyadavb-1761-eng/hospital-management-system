@@ -3,42 +3,54 @@ import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import authRoutes from "./routes/authRoutes.js";
-import userRoutes from "./routes/userRoutes.js";
 import doctorRoutes from "./routes/doctorRoutes.js";
 import appointmentRoutes from "./routes/appointmentRoutes.js";
 import patientRoutes from "./routes/patientRoutes.js";
+
 // 1. Configs
 dotenv.config();
 const app = express();
-app.use(cors({ origin: "http://localhost:5173", credentials: true }));
-// 2. Middlewares (Server ko JSON samajhne layak banana)
+
+// 2. CORS — Vercel frontend allow karo
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://hospital-management-system-liart-seven.vercel.app",
+      /\.vercel\.app$/, // saare vercel domains allow
+    ],
+    credentials: true,
+  }),
+);
+
+// 3. Middlewares
 app.use(express.json());
 
-// 3. Database Connection Logic
+// 4. Database Connection
 const connectDB = async () => {
   try {
     const conn = await mongoose.connect(process.env.MONGO_URI);
-    console.log(`MongoDB Connected: ${conn.connection.host} `);
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
-    console.error(`Error: ${error.message}`);
+    console.error(`DB Error: ${error.message}`);
     process.exit(1);
   }
 };
 
 connectDB();
 
-// 4. Routes
+// 5. Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
 app.use("/api/doctors", doctorRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/patients", patientRoutes);
+
 app.get("/", (req, res) => {
-  res.send("Hospital Management System backend started!");
+  res.send("Hospital Management System backend running! ✅");
 });
 
-// 5. Port Setup
-const PORT = process.env.PORT || 5000;
+// 6. Port
+const PORT = process.env.PORT || 8001;
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
