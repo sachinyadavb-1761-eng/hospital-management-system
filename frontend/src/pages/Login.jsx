@@ -19,13 +19,17 @@ export default function Login() {
     setError("");
     try {
       const res = await authAPI.login(form);
-      const { token } = res.data;
+      const { token, user } = res.data;
       localStorage.setItem("token", token);
-      localStorage.setItem(
-        "user",
-        JSON.stringify({ name: "Admin", role: "patient" }),
-      );
-      navigate("/dashboard");
+      // ✅ Backend se actual user object save ho raha hai
+      localStorage.setItem("user", JSON.stringify(user));
+
+      // ✅ Role ke hisaab se redirect
+      if (user.role === "admin") {
+        navigate("/dashboard");
+      } else {
+        navigate("/doctor-dashboard");
+      }
     } catch (err) {
       setError(
         err.response?.data?.message || "Login failed. Please try again.",

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { authAPI } from "../services/api";
 
 export default function Register() {
@@ -8,26 +8,22 @@ export default function Register() {
     name: "",
     email: "",
     password: "",
-    confirmPassword: "",
-    role: "staff",
+    role: "doctor",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) =>
+  const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setError("");
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    if (form.password !== form.confirmPassword)
-      return setError("Passwords do not match");
-    if (form.password.length < 6)
-      return setError("Password must be at least 6 characters");
     setLoading(true);
+    setError("");
     try {
-      const { confirmPassword, ...payload } = form;
-      await authAPI.register(payload);
+      await authAPI.register(form);
       navigate("/login");
     } catch (err) {
       setError(
@@ -39,110 +35,108 @@ export default function Register() {
   };
 
   return (
-    <div style={s.page}>
-      {/* Left Panel */}
-      <div style={s.left}>
-        <div style={s.brand}>
-          <span style={s.brandIcon}>✚</span>
-          <span style={s.brandName}>MediCore</span>
+    <div style={styles.page}>
+      <div style={styles.left}>
+        <div style={styles.brand}>
+          <div style={styles.brandIcon}>✚</div>
+          <span style={styles.brandName}>MediCore</span>
         </div>
-        <div style={s.tagline}>
-          <h1 style={s.tagH}>
-            Hospital Management
+        <div style={styles.heroText}>
+          <h1 style={styles.heroHeading}>
+            Join
             <br />
-            Made Simple.
+            MediCore
+            <br />
+            Today
           </h1>
-          <p style={s.tagP}>
-            Join thousands of healthcare professionals managing their practice
-            efficiently.
-          </p>
+          <p style={styles.heroSub}>Create your account and get started.</p>
         </div>
-        <div style={s.featureList}>
+        <div style={styles.stats}>
           {[
-            "Manage Doctors & Patients",
-            "Track Appointments",
-            "Real-time Dashboard",
-            "Secure & HIPAA Ready",
-          ].map((f) => (
-            <div key={f} style={s.feature}>
-              <span style={s.featureCheck}>✓</span>
-              <span style={s.featureText}>{f}</span>
+            ["120+", "Doctors"],
+            ["5,400+", "Patients"],
+            ["98%", "Uptime"],
+          ].map(([val, label]) => (
+            <div key={label} style={styles.statItem}>
+              <span style={styles.statVal}>{val}</span>
+              <span style={styles.statLabel}>{label}</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Right Panel */}
-      <div style={s.right}>
-        <div style={s.card}>
-          <h2 style={s.cardTitle}>Create Account</h2>
-          <p style={s.cardSub}>Set up your MediCore account</p>
+      <div style={styles.right}>
+        <div style={styles.card}>
+          <h2 style={styles.cardTitle}>Create Account</h2>
+          <p style={styles.cardSub}>Fill in details to register</p>
 
-          {error && <div style={s.errorBox}>⚠ {error}</div>}
+          {error && <div style={styles.errorBox}>{error}</div>}
 
-          <form onSubmit={handleSubmit} style={s.form}>
-            <Field
-              label="Full Name"
-              name="name"
-              type="text"
-              placeholder="Dr. John Smith"
-              value={form.name}
-              onChange={handleChange}
-              required
-            />
-            <Field
-              label="Email Address"
-              name="email"
-              type="email"
-              placeholder="doctor@hospital.com"
-              value={form.email}
-              onChange={handleChange}
-              required
-            />
-            <div style={s.row}>
-              <Field
-                label="Password"
-                name="password"
-                type="password"
-                placeholder="Min 6 characters"
-                value={form.password}
+          <form onSubmit={handleSubmit} style={styles.form}>
+            <div style={styles.field}>
+              <label style={styles.label}>Full Name</label>
+              <input
+                style={styles.input}
+                type="text"
+                name="name"
+                value={form.name}
                 onChange={handleChange}
-                required
-              />
-              <Field
-                label="Confirm Password"
-                name="confirmPassword"
-                type="password"
-                placeholder="Repeat password"
-                value={form.confirmPassword}
-                onChange={handleChange}
+                placeholder="Dr. John Smith"
                 required
               />
             </div>
-            <div style={s.fieldGroup}>
-              <label style={s.label}>Role</label>
+            <div style={styles.field}>
+              <label style={styles.label}>Email</label>
+              <input
+                style={styles.input}
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="doctor@hospital.com"
+                required
+              />
+            </div>
+            <div style={styles.field}>
+              <label style={styles.label}>Password</label>
+              <input
+                style={styles.input}
+                type="password"
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+                placeholder="••••••••"
+                required
+              />
+            </div>
+            {/* ✅ Role Select */}
+            <div style={styles.field}>
+              <label style={styles.label}>Role</label>
               <select
                 name="role"
                 value={form.role}
                 onChange={handleChange}
-                style={s.select}
+                style={styles.select}
               >
-                <option value="staff">Staff</option>
                 <option value="admin">Admin</option>
                 <option value="doctor">Doctor</option>
               </select>
             </div>
 
-            <button type="submit" style={s.submitBtn} disabled={loading}>
-              {loading ? "Creating Account…" : "Create Account →"}
+            <button
+              type="submit"
+              style={{ ...styles.btn, ...(loading ? styles.btnDisabled : {}) }}
+              disabled={loading}
+            >
+              {loading ? "Registering…" : "Register →"}
             </button>
           </form>
 
-          <p style={s.loginLink}>
+          <p style={styles.footer}>
             Already have an account?{" "}
-            <Link to="/login" style={s.link}>
-              Sign in
-            </Link>
+            <span style={styles.link} onClick={() => navigate("/login")}>
+              Sign In
+            </span>
           </p>
         </div>
       </div>
@@ -150,153 +144,131 @@ export default function Register() {
   );
 }
 
-function Field({ label, name, type, placeholder, value, onChange, required }) {
-  return (
-    <div style={s.fieldGroup}>
-      <label style={s.label}>{label}</label>
-      <input
-        name={name}
-        type={type}
-        placeholder={placeholder}
-        value={value}
-        onChange={onChange}
-        required={required}
-        style={s.input}
-        onFocus={(e) => (e.target.style.borderColor = "#1a73e8")}
-        onBlur={(e) => (e.target.style.borderColor = "#e2e8f0")}
-      />
-    </div>
-  );
-}
-
-const s = {
+const styles = {
   page: {
     display: "flex",
     minHeight: "100vh",
     fontFamily: "'Segoe UI', sans-serif",
+    backgroundColor: "#f0f4f8",
   },
-  // Left
   left: {
-    width: "42%",
-    background: "#0f172a",
-    padding: "48px 52px",
+    flex: 1,
+    background: "linear-gradient(135deg, #0f4c81 0%, #1a73e8 100%)",
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
+    padding: "48px 52px",
+    color: "#fff",
   },
-  brand: { display: "flex", alignItems: "center", gap: 10 },
+  brand: { display: "flex", alignItems: "center", gap: 12 },
   brandIcon: {
-    fontSize: 20,
-    background: "#1a73e8",
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    fontSize: 28,
+    background: "rgba(255,255,255,0.2)",
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontWeight: "bold",
-    color: "#fff",
   },
-  brandName: { color: "#fff", fontSize: 20, fontWeight: 700 },
-  tagline: { margin: "auto 0" },
-  tagH: {
-    color: "#fff",
-    fontSize: 34,
-    fontWeight: 800,
-    lineHeight: 1.25,
-    margin: "0 0 16px",
-    letterSpacing: "-0.5px",
-  },
-  tagP: { color: "#94a3b8", fontSize: 15, lineHeight: 1.6, margin: 0 },
-  featureList: { display: "flex", flexDirection: "column", gap: 12 },
-  feature: { display: "flex", alignItems: "center", gap: 10 },
-  featureCheck: {
-    width: 22,
-    height: 22,
-    borderRadius: "50%",
-    background: "rgba(26,115,232,0.15)",
-    color: "#1a73e8",
+  brandName: { fontSize: 22, fontWeight: 700, letterSpacing: "-0.5px" },
+  heroText: {
+    flex: 1,
     display: "flex",
-    alignItems: "center",
+    flexDirection: "column",
     justifyContent: "center",
-    fontSize: 12,
-    fontWeight: 700,
-    flexShrink: 0,
   },
-  featureText: { color: "#cbd5e1", fontSize: 14 },
-  // Right
+  heroHeading: {
+    fontSize: 52,
+    fontWeight: 800,
+    lineHeight: 1.1,
+    letterSpacing: "-1px",
+    margin: 0,
+    marginBottom: 16,
+  },
+  heroSub: { fontSize: 17, opacity: 0.8, margin: 0 },
+  stats: { display: "flex", gap: 40 },
+  statItem: { display: "flex", flexDirection: "column" },
+  statVal: { fontSize: 28, fontWeight: 800 },
+  statLabel: { fontSize: 13, opacity: 0.7, marginTop: 2 },
   right: {
     flex: 1,
-    background: "#f8fafc",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    padding: "40px 32px",
+    padding: 40,
   },
   card: {
     background: "#fff",
     borderRadius: 20,
-    padding: "40px 40px",
-    boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
+    padding: "48px 44px",
     width: "100%",
-    maxWidth: 500,
+    maxWidth: 420,
+    boxShadow: "0 8px 40px rgba(0,0,0,0.10)",
   },
   cardTitle: {
-    margin: "0 0 6px",
-    fontSize: 24,
+    margin: 0,
+    fontSize: 28,
     fontWeight: 800,
     color: "#0f172a",
+    letterSpacing: "-0.5px",
   },
-  cardSub: { margin: "0 0 28px", color: "#64748b", fontSize: 14 },
+  cardSub: { color: "#64748b", fontSize: 15, margin: "6px 0 28px" },
   errorBox: {
-    background: "#fee2e2",
-    color: "#991b1b",
-    padding: "10px 14px",
-    borderRadius: 8,
+    background: "#fef2f2",
+    border: "1px solid #fecaca",
+    color: "#dc2626",
+    borderRadius: 10,
+    padding: "12px 16px",
+    fontSize: 14,
     marginBottom: 20,
-    fontSize: 13,
-    fontWeight: 500,
   },
-  form: { display: "flex", flexDirection: "column", gap: 18 },
-  row: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 },
-  fieldGroup: { display: "flex", flexDirection: "column", gap: 6 },
-  label: { fontSize: 13, fontWeight: 600, color: "#374151" },
+  form: { display: "flex", flexDirection: "column", gap: 20 },
+  field: { display: "flex", flexDirection: "column", gap: 6 },
+  label: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#374151",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+  },
   input: {
-    padding: "11px 14px",
+    padding: "12px 16px",
     borderRadius: 10,
     border: "1.5px solid #e2e8f0",
-    fontSize: 14,
-    color: "#0f172a",
+    fontSize: 15,
     outline: "none",
+    color: "#0f172a",
     transition: "border-color 0.2s",
-    background: "#f8fafc",
   },
   select: {
-    padding: "11px 14px",
+    padding: "12px 16px",
     borderRadius: 10,
     border: "1.5px solid #e2e8f0",
-    fontSize: 14,
-    color: "#0f172a",
+    fontSize: 15,
     outline: "none",
+    color: "#0f172a",
     background: "#f8fafc",
   },
-  submitBtn: {
-    padding: "13px",
-    borderRadius: 10,
+  btn: {
+    marginTop: 8,
+    padding: "14px",
+    borderRadius: 12,
     border: "none",
-    background: "#1a73e8",
+    background: "linear-gradient(135deg, #0f4c81, #1a73e8)",
     color: "#fff",
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: 700,
     cursor: "pointer",
-    marginTop: 4,
-    letterSpacing: "-0.2px",
+    letterSpacing: "0.2px",
   },
-  loginLink: {
+  btnDisabled: { opacity: 0.6, cursor: "not-allowed" },
+  footer: {
     textAlign: "center",
-    marginTop: 20,
-    fontSize: 13,
+    marginTop: 24,
     color: "#64748b",
+    fontSize: 14,
   },
-  link: { color: "#1a73e8", fontWeight: 600, textDecoration: "none" },
+  link: { color: "#1a73e8", fontWeight: 600, cursor: "pointer" },
 };
