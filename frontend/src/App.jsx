@@ -1,61 +1,55 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+import Home from "./pages/Home";
+import Login from "./pages/Login"; // Patient Login
+import Register from "./pages/Register"; // Patient Register
+import StaffLogin from "./pages/StaffLogin"; // New: Dedicated Staff Login
 import Dashboard from "./pages/Dashboard";
 import DoctorDashboard from "./pages/DoctorDashboard";
-import Home from "./pages/Home";
 
-function PrivateRoute({ children }) {
+// Role-based protection
+function PrivateRoute({ children, role }) {
   const token = localStorage.getItem("token");
-  return token ? children : <Navigate to="/login" />;
-}
-
-function RoleRoute() {
-  const token = localStorage.getItem("token");
-  if (!token) return <Navigate to="/login" />;
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-  return user.role === "admin" ? (
-    <Navigate to="/dashboard" />
-  ) : (
-    <Navigate to="/doctor-dashboard" />
-  );
+
+  if (!token) return <Navigate to="/login" />;
+  if (role && user.role !== role) return <Navigate to="/" />;
+  return children;
 }
 
-function App() {
+export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ✅ Public Landing Page */}
+        {/* Patient Routes */}
         <Route path="/" element={<Home />} />
-
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Admin Dashboard */}
+        {/* Dedicated Staff URL */}
+        <Route path="/staff/login" element={<StaffLogin />} />
+
+        {/* Admin Only */}
         <Route
           path="/dashboard"
           element={
-            <PrivateRoute>
+            <PrivateRoute role="admin">
               <Dashboard />
             </PrivateRoute>
           }
         />
 
-        {/* Doctor Dashboard */}
+        {/* Doctor Only */}
         <Route
           path="/doctor-dashboard"
           element={
-            <PrivateRoute>
+            <PrivateRoute role="doctor">
               <DoctorDashboard />
             </PrivateRoute>
           }
         />
 
-        <Route path="/home" element={<RoleRoute />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
   );
 }
-
-export default App;

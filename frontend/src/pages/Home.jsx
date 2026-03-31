@@ -8,6 +8,7 @@ const DOCTORS = [
     exp: "12 yrs",
     img: "AM",
     color: "#0ea5e9",
+    fee: 800,
   },
   {
     name: "Dr. Priya Sharma",
@@ -15,6 +16,7 @@ const DOCTORS = [
     exp: "9 yrs",
     img: "PS",
     color: "#8b5cf6",
+    fee: 1000,
   },
   {
     name: "Dr. Rohan Verma",
@@ -22,6 +24,7 @@ const DOCTORS = [
     exp: "15 yrs",
     img: "RV",
     color: "#10b981",
+    fee: 700,
   },
   {
     name: "Dr. Sneha Gupta",
@@ -29,6 +32,7 @@ const DOCTORS = [
     exp: "7 yrs",
     img: "SG",
     color: "#f59e0b",
+    fee: 600,
   },
 ];
 
@@ -36,54 +40,31 @@ const SERVICES = [
   {
     icon: "🫀",
     title: "Cardiology",
-    desc: "Advanced heart care with cutting-edge diagnostics and treatment.",
+    desc: "Advanced heart care with cutting-edge diagnostics.",
   },
   {
     icon: "🧠",
     title: "Neurology",
-    desc: "Expert brain & nervous system care for complex conditions.",
+    desc: "Expert brain & nervous system care.",
   },
   {
     icon: "🦴",
     title: "Orthopedics",
-    desc: "Bone, joint and spine treatments with modern techniques.",
+    desc: "Bone, joint and spine treatments.",
   },
   {
     icon: "👶",
     title: "Pediatrics",
-    desc: "Compassionate healthcare for children of all ages.",
+    desc: "Compassionate healthcare for children.",
   },
-  {
-    icon: "👁️",
-    title: "Ophthalmology",
-    desc: "Complete eye care from routine checks to surgery.",
-  },
-  {
-    icon: "🦷",
-    title: "Dentistry",
-    desc: "Full dental care including cosmetic and restorative work.",
-  },
-];
-
-const PAYMENT_METHODS = [
-  { icon: "💳", name: "Credit / Debit Card" },
-  { icon: "📱", name: "UPI" },
-  { icon: "🏦", name: "Net Banking" },
-  { icon: "💰", name: "Cash" },
-  { icon: "📲", name: "Paytm / PhonePe" },
-  { icon: "🌐", name: "Razorpay" },
 ];
 
 export default function Home() {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
-  const [activeSection, setActiveSection] = useState("home");
-  const [contactForm, setContactForm] = useState({
-    name: "",
-    email: "",
-    message: "",
-  });
-  const [submitted, setSubmitted] = useState(false);
+
+  // Check if User is logged in
+  const user = JSON.parse(localStorage.getItem("user") || "null");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60);
@@ -93,14 +74,22 @@ export default function Home() {
 
   const scrollTo = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-    setActiveSection(id);
   };
 
-  const handleContact = (e) => {
-    e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 3000);
-    setContactForm({ name: "", email: "", message: "" });
+  const handleBooking = (doctor) => {
+    if (!user) {
+      alert("Please login as a patient to book an appointment.");
+      navigate("/login");
+    } else {
+      // Yaha hum payment gatewey par bhejenge (Next Step)
+      console.log(`Processing payment of ₹${doctor.fee} for ${doctor.name}`);
+      alert(`Redirecting to Payment Gateway for ${doctor.name}...`);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.clear();
+    window.location.reload();
   };
 
   return (
@@ -108,101 +97,75 @@ export default function Home() {
       {/* ── Navbar ── */}
       <nav style={{ ...s.nav, ...(scrolled ? s.navScrolled : {}) }}>
         <div style={s.navInner}>
-          <div style={s.logo}>
+          <div style={s.logo} onClick={() => navigate("/")}>
             <div style={s.logoMark}>✚</div>
             <span style={s.logoText}>MediCore</span>
           </div>
+
           <div style={s.navLinks}>
-            {["home", "services", "doctors", "about", "contact"].map((sec) => (
-              <button
-                key={sec}
-                style={{
-                  ...s.navLink,
-                  ...(activeSection === sec ? s.navLinkActive : {}),
-                }}
-                onClick={() => scrollTo(sec)}
-              >
-                {sec.charAt(0).toUpperCase() + sec.slice(1)}
-              </button>
-            ))}
+            <button style={s.navLink} onClick={() => scrollTo("home")}>
+              Home
+            </button>
+            <button style={s.navLink} onClick={() => scrollTo("services")}>
+              Services
+            </button>
+            <button style={s.navLink} onClick={() => scrollTo("doctors")}>
+              Doctors
+            </button>
           </div>
+
           <div style={s.navActions}>
-            {/* NEW: Staff Portal Link (Hidden/Subtle) */}
+            {/* Subtle Staff Link */}
             <button
               style={s.staffLink}
               onClick={() => navigate("/staff/login")}
             >
               Staff Portal
             </button>
-            <button style={s.loginBtn} onClick={() => navigate("/login")}>
-              Login
-            </button>
-            <button style={s.registerBtn} onClick={() => navigate("/register")}>
-              Register Free
-            </button>
+
+            {user ? (
+              <div style={s.userProfile}>
+                <span style={s.userName}>Hi, {user.name.split(" ")[0]}</span>
+                <button style={s.logoutBtn} onClick={handleLogout}>
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <>
+                <button style={s.loginBtn} onClick={() => navigate("/login")}>
+                  Login
+                </button>
+                <button
+                  style={s.registerBtn}
+                  onClick={() => navigate("/register")}
+                >
+                  Register
+                </button>
+              </>
+            )}
           </div>
         </div>
       </nav>
 
       {/* ── Hero ── */}
       <section id="home" style={s.hero}>
-        <div style={s.heroBg} />
-        <div style={s.heroGrid} />
         <div style={s.heroContent}>
-          <div style={s.heroTag}>
-            🏥 India's #1 Hospital Management Platform
-          </div>
+          <div style={s.heroTag}>👋 Welcome to MediCore</div>
           <h1 style={s.heroTitle}>
-            Your Health, <br />
-            <span style={s.heroAccent}>Our Priority</span>
+            Book Your <span style={s.heroAccent}>Doctor</span> <br />
+            Appointment Online
           </h1>
           <p style={s.heroDesc}>
-            Book appointments, consult top doctors, and manage your health
-            journey — all in one place.
+            Skip the queue. Select your specialist, pay securely, and get your
+            confirmed slot instantly.
           </p>
           <div style={s.heroBtns}>
             <button
               style={s.heroCtaPrimary}
-              onClick={() => navigate("/register")}
+              onClick={() => scrollTo("doctors")}
             >
-              Book Appointment →
+              Book Now →
             </button>
-            <button
-              style={s.heroCtaSecondary}
-              onClick={() => scrollTo("services")}
-            >
-              Explore Services
-            </button>
-          </div>
-          <div style={s.heroStats}>
-            {[
-              ["500+", "Doctors"],
-              ["50K+", "Patients"],
-              ["98%", "Satisfaction"],
-            ].map(([val, label]) => (
-              <div key={label} style={s.heroStat}>
-                <span style={s.heroStatVal}>{val}</span>
-                <span style={s.heroStatLabel}>{label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div style={s.heroVisual}>
-          <div style={s.heroCard}>
-            <div style={s.heroCardHeader}>
-              <div style={s.heroCardDot} />
-              <span style={s.heroCardTitle}>Next Appointment</span>
-            </div>
-            <div style={s.heroCardDoctor}>
-              <div style={{ ...s.heroCardAvatar, background: "#0ea5e9" }}>
-                AM
-              </div>
-              <div>
-                <div style={s.heroCardName}>Dr. Aryan Mehta</div>
-                <div style={s.heroCardSpec}>Cardiologist</div>
-              </div>
-            </div>
-            <div style={s.heroCardStatus}>✅ Confirmed</div>
           </div>
         </div>
       </section>
@@ -210,35 +173,23 @@ export default function Home() {
       {/* ── Services ── */}
       <section id="services" style={s.section}>
         <div style={s.sectionInner}>
-          <div style={s.sectionTag}>What We Offer</div>
-          <h2 style={s.sectionTitle}>
-            Our <span style={s.accent}>Specializations</span>
-          </h2>
+          <h2 style={s.sectionTitle}>Our Specializations</h2>
           <div style={s.serviceGrid}>
             {SERVICES.map((sv) => (
               <div key={sv.title} style={s.serviceCard}>
                 <div style={s.serviceIcon}>{sv.icon}</div>
                 <h3 style={s.serviceTitle}>{sv.title}</h3>
                 <p style={s.serviceDesc}>{sv.desc}</p>
-                <button
-                  style={s.serviceBtn}
-                  onClick={() => navigate("/register")}
-                >
-                  Book Now →
-                </button>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Doctors ── */}
+      {/* ── Doctors (Booking Logic Here) ── */}
       <section id="doctors" style={{ ...s.section, background: "#f8fafc" }}>
         <div style={s.sectionInner}>
-          <div style={s.sectionTag}>Meet The Team</div>
-          <h2 style={s.sectionTitle}>
-            Our <span style={s.accent}>Top Doctors</span>
-          </h2>
+          <h2 style={s.sectionTitle}>Available Specialists</h2>
           <div style={s.doctorGrid}>
             {DOCTORS.map((doc) => (
               <div key={doc.name} style={s.doctorCard}>
@@ -246,12 +197,14 @@ export default function Home() {
                   {doc.img}
                 </div>
                 <h3 style={s.doctorName}>{doc.name}</h3>
-                <div style={s.doctorSpec}>{doc.spec}</div>
-                <button
-                  style={s.doctorBtn}
-                  onClick={() => navigate("/register")}
-                >
-                  Book Appointment
+                <div style={s.doctorSpec}>
+                  {doc.spec} • {doc.exp}
+                </div>
+                <div style={s.doctorFee}>
+                  Consultation: <b>₹{doc.fee}</b>
+                </div>
+                <button style={s.doctorBtn} onClick={() => handleBooking(doc)}>
+                  Confirm & Pay
                 </button>
               </div>
             ))}
@@ -259,73 +212,15 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Payment ── */}
-      <section style={{ ...s.section, background: "#0f172a" }}>
-        <div style={s.sectionInner}>
-          <h2 style={{ ...s.sectionTitle, color: "#fff", textAlign: "center" }}>
-            All Payment Methods
-          </h2>
-          <div style={s.paymentGrid}>
-            {PAYMENT_METHODS.map((pm) => (
-              <div key={pm.name} style={s.paymentCard}>
-                <span style={s.paymentIcon}>{pm.icon}</span>
-                <span style={s.paymentName}>{pm.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Contact ── */}
-      <section id="contact" style={s.section}>
-        <div style={s.sectionInner}>
-          <div style={s.contactGrid}>
-            <div style={s.contactInfo}>
-              <h2 style={s.sectionTitle}>
-                Contact <span style={s.accent}>Us</span>
-              </h2>
-              <p>📍 123 Medical Hub, New Delhi, India</p>
-              <p>📞 +91 98765 43210</p>
-            </div>
-            <form onSubmit={handleContact} style={s.contactForm}>
-              {submitted && <div style={s.successBox}>✅ Message sent!</div>}
-              <input style={s.contactInput} placeholder="Your Name" required />
-              <input
-                style={s.contactInput}
-                type="email"
-                placeholder="Your Email"
-                required
-              />
-              <textarea
-                style={{ ...s.contactInput, height: 100 }}
-                placeholder="Message"
-                required
-              />
-              <button type="submit" style={s.contactBtn}>
-                Send Message
-              </button>
-            </form>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Footer ── */}
       <footer style={s.footer}>
-        <div style={s.footerInner}>
-          <span style={{ color: "#fff", fontWeight: 800 }}>MediCore</span>
-          <p style={s.footerCopy}>© 2026 MediCore. All rights reserved.</p>
-        </div>
+        <p>© 2026 MediCore Patient Portal. Designed for Excellence.</p>
       </footer>
     </div>
   );
 }
 
 const s = {
-  root: {
-    fontFamily: "'Inter', sans-serif",
-    background: "#fff",
-    overflowX: "hidden",
-  },
+  root: { fontFamily: "'Inter', sans-serif", background: "#fff" },
   nav: {
     position: "fixed",
     top: 0,
@@ -333,234 +228,142 @@ const s = {
     right: 0,
     zIndex: 100,
     padding: "20px 0",
-    transition: "all 0.3s",
+    transition: "0.3s",
   },
   navScrolled: {
-    background: "rgba(255,255,255,0.95)",
-    boxShadow: "0 2px 20px rgba(0,0,0,0.08)",
-    padding: "14px 0",
+    background: "#fff",
+    boxShadow: "0 2px 20px rgba(0,0,0,0.1)",
+    padding: "12px 0",
   },
   navInner: {
     maxWidth: 1200,
     margin: "0 auto",
-    padding: "0 40px",
+    padding: "0 20px",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  logo: { display: "flex", alignItems: "center", gap: 10 },
+  logo: { display: "flex", alignItems: "center", gap: 10, cursor: "pointer" },
   logoMark: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     background: "#0ea5e9",
-    borderRadius: 10,
+    borderRadius: 8,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     color: "#fff",
     fontWeight: 900,
   },
-  logoText: { fontSize: 20, fontWeight: 800, color: "#0f172a" },
-  navLinks: { display: "flex", gap: 4 },
+  logoText: { fontSize: 18, fontWeight: 800, color: "#0f172a" },
+  navLinks: { display: "flex", gap: 20 },
   navLink: {
-    padding: "8px 16px",
     border: "none",
-    background: "transparent",
-    color: "#475569",
-    fontSize: 15,
+    background: "none",
     cursor: "pointer",
-  },
-  navLinkActive: { color: "#0ea5e9", fontWeight: 700 },
-  navActions: { display: "flex", gap: 12, alignItems: "center" },
-
-  // NEW: Staff Link Style
-  staffLink: {
-    background: "transparent",
-    border: "none",
-    color: "#94a3b8",
-    fontSize: 13,
-    cursor: "pointer",
+    color: "#64748b",
     fontWeight: 500,
   },
-
+  navActions: { display: "flex", gap: 15, alignItems: "center" },
+  staffLink: {
+    background: "none",
+    border: "none",
+    color: "#94a3b8",
+    fontSize: 12,
+    cursor: "pointer",
+    textDecoration: "underline",
+  },
   loginBtn: {
-    padding: "9px 20px",
-    borderRadius: 10,
-    border: "1.5px solid #e2e8f0",
-    background: "transparent",
+    padding: "8px 16px",
+    borderRadius: 8,
+    border: "1px solid #e2e8f0",
+    background: "none",
     fontWeight: 600,
     cursor: "pointer",
   },
   registerBtn: {
-    padding: "9px 20px",
-    borderRadius: 10,
+    padding: "8px 16px",
+    borderRadius: 8,
     border: "none",
     background: "#0ea5e9",
     color: "#fff",
-    fontWeight: 700,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  userProfile: { display: "flex", alignItems: "center", gap: 10 },
+  userName: { fontWeight: 700, color: "#0ea5e9" },
+  logoutBtn: {
+    padding: "5px 10px",
+    fontSize: 12,
+    borderRadius: 5,
+    border: "1px solid #ef4444",
+    color: "#ef4444",
+    background: "none",
     cursor: "pointer",
   },
   hero: {
-    minHeight: "100vh",
-    display: "flex",
-    alignItems: "center",
-    position: "relative",
-    background: "#0f172a",
-    padding: "120px 40px",
+    padding: "160px 20px 100px",
+    textAlign: "center",
+    background: "linear-gradient(to bottom, #f0f9ff, #fff)",
   },
-  heroBg: {
-    position: "absolute",
-    inset: 0,
-    background:
-      "radial-gradient(circle at 20% 50%, rgba(14,165,233,0.15), transparent)",
-  },
-  heroGrid: {
-    position: "absolute",
-    inset: 0,
-    backgroundImage:
-      "radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)",
-    backgroundSize: "40px 40px",
-  },
-  heroContent: { flex: 1, position: "relative", zIndex: 1 },
+  heroContent: { maxWidth: 800, margin: "0 auto" },
   heroTag: {
-    display: "inline-block",
-    background: "rgba(14,165,233,0.1)",
-    color: "#38bdf8",
-    padding: "6px 12px",
-    borderRadius: 20,
-    fontSize: 12,
-    marginBottom: 20,
+    color: "#0ea5e9",
+    fontWeight: 700,
+    fontSize: 14,
+    marginBottom: 15,
   },
   heroTitle: {
-    fontSize: 60,
+    fontSize: 48,
     fontWeight: 900,
-    color: "#fff",
-    lineHeight: 1.1,
-    marginBottom: 20,
+    color: "#0f172a",
+    lineHeight: 1.2,
   },
   heroAccent: { color: "#0ea5e9" },
-  heroDesc: { fontSize: 18, color: "#94a3b8", marginBottom: 30, maxWidth: 500 },
-  heroBtns: { display: "flex", gap: 15, marginBottom: 40 },
+  heroDesc: { fontSize: 18, color: "#64748b", margin: "20px 0 30px" },
   heroCtaPrimary: {
-    padding: "14px 28px",
+    padding: "14px 30px",
     borderRadius: 10,
     border: "none",
     background: "#0ea5e9",
     color: "#fff",
     fontWeight: 700,
+    fontSize: 16,
     cursor: "pointer",
   },
-  heroCtaSecondary: {
-    padding: "14px 28px",
-    borderRadius: 10,
-    border: "1px solid #334155",
-    background: "transparent",
-    color: "#fff",
-    cursor: "pointer",
-  },
-  heroStats: { display: "flex", gap: 30 },
-  heroStatVal: {
-    fontSize: 24,
-    fontWeight: 800,
-    color: "#fff",
-    display: "block",
-  },
-  heroStatLabel: { fontSize: 12, color: "#64748b" },
-  heroVisual: {
-    flex: 1,
-    display: "flex",
-    justifyContent: "center",
-    position: "relative",
-  },
-  heroCard: {
-    background: "rgba(255,255,255,0.05)",
-    backdropFilter: "blur(10px)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: 15,
-    padding: 20,
-    width: 250,
-  },
-  heroCardHeader: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 15,
-  },
-  heroCardDot: {
-    width: 8,
-    height: 8,
-    borderRadius: "50%",
-    background: "#10b981",
-  },
-  heroCardTitle: { color: "#94a3b8", fontSize: 12 },
-  heroCardDoctor: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 15,
-  },
-  heroCardAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#fff",
-    fontWeight: 700,
-  },
-  heroCardName: { color: "#fff", fontSize: 14, fontWeight: 600 },
-  heroCardSpec: { color: "#64748b", fontSize: 12 },
-  heroCardStatus: { color: "#10b981", fontSize: 12, fontWeight: 600 },
-  section: { padding: "80px 40px" },
+  section: { padding: "80px 20px" },
   sectionInner: { maxWidth: 1200, margin: "0 auto" },
-  sectionTag: {
-    color: "#0ea5e9",
-    fontWeight: 700,
-    fontSize: 12,
-    textTransform: "uppercase",
-    marginBottom: 10,
-    display: "block",
-  },
   sectionTitle: {
-    fontSize: 36,
+    fontSize: 32,
     fontWeight: 800,
-    color: "#0f172a",
-    marginBottom: 40,
+    textAlign: "center",
+    marginBottom: 50,
   },
-  accent: { color: "#0ea5e9" },
   serviceGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-    gap: 20,
+    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+    gap: 25,
   },
   serviceCard: {
-    padding: 30,
-    borderRadius: 20,
+    padding: "30px",
+    borderRadius: 15,
     border: "1px solid #f1f5f9",
-    background: "#fff",
+    textAlign: "center",
   },
-  serviceIcon: { fontSize: 40, marginBottom: 20 },
-  serviceTitle: { fontSize: 20, fontWeight: 700, marginBottom: 10 },
-  serviceDesc: { color: "#64748b", fontSize: 14, marginBottom: 20 },
-  serviceBtn: {
-    background: "transparent",
-    border: "none",
-    color: "#0ea5e9",
-    fontWeight: 700,
-    cursor: "pointer",
-  },
+  serviceIcon: { fontSize: 40, marginBottom: 15 },
+  serviceTitle: { fontSize: 18, fontWeight: 700, marginBottom: 10 },
+  serviceDesc: { color: "#64748b", fontSize: 14 },
   doctorGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-    gap: 20,
+    gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+    gap: 25,
   },
   doctorCard: {
     background: "#fff",
-    padding: 20,
+    padding: "25px",
     borderRadius: 20,
     textAlign: "center",
-    border: "1px solid #f1f5f9",
+    border: "1px solid #e2e8f0",
   },
   doctorAvatar: {
     width: 60,
@@ -572,59 +375,26 @@ const s = {
     justifyContent: "center",
     color: "#fff",
     fontWeight: 800,
+    fontSize: 20,
   },
-  doctorName: { fontSize: 16, fontWeight: 700, marginBottom: 5 },
-  doctorSpec: { color: "#0ea5e9", fontSize: 13, marginBottom: 15 },
+  doctorName: { fontSize: 18, fontWeight: 700, marginBottom: 5 },
+  doctorSpec: { color: "#0ea5e9", fontSize: 14, marginBottom: 10 },
+  doctorFee: { marginBottom: 20, fontSize: 15, color: "#475569" },
   doctorBtn: {
     width: "100%",
-    padding: "10px",
-    borderRadius: 8,
-    border: "none",
-    background: "#0f172a",
-    color: "#fff",
-    fontWeight: 600,
-    cursor: "pointer",
-  },
-  paymentGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-    gap: 15,
-  },
-  paymentCard: {
-    background: "rgba(255,255,255,0.05)",
-    padding: 15,
-    borderRadius: 12,
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-  },
-  paymentIcon: { fontSize: 20 },
-  paymentName: { color: "#fff", fontSize: 14 },
-  contactGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 50 },
-  contactInfo: { display: "flex", flexDirection: "column", gap: 15 },
-  contactForm: { display: "flex", flexDirection: "column", gap: 15 },
-  contactInput: {
     padding: "12px",
-    borderRadius: 8,
-    border: "1px solid #e2e8f0",
-    outline: "none",
-  },
-  contactBtn: {
-    padding: "12px",
-    borderRadius: 8,
+    borderRadius: 10,
     border: "none",
     background: "#0f172a",
     color: "#fff",
     fontWeight: 700,
     cursor: "pointer",
   },
-  successBox: {
-    background: "#d1fae5",
-    color: "#065f46",
-    padding: "10px",
-    borderRadius: 8,
-    marginBottom: 10,
+  footer: {
+    padding: "40px",
+    textAlign: "center",
+    background: "#0f172a",
+    color: "#94a3b8",
+    fontSize: 13,
   },
-  footer: { background: "#0f172a", padding: "40px", textAlign: "center" },
-  footerCopy: { color: "#64748b", fontSize: 12, marginTop: 10 },
 };
