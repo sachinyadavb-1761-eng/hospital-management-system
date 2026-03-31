@@ -4,22 +4,44 @@ import { authAPI } from "../services/api";
 
 export default function StaffLogin() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: "", password: "" });
+
+  const [form, setForm] = useState({
+    email: "",
+    password: "",
+  });
+
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
+
     try {
-      const res = await authAPI.login(form); // API call
+      const res = await authAPI.login(form);
       const { token, user } = res.data;
+
+      // ✅ Allow only admin & doctor
+      if (user.role !== "admin" && user.role !== "doctor") {
+        setError("Access Denied: Not a staff member.");
+        return;
+      }
+
+      // ✅ Save only if valid staff
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
 
-      if (user.role === "admin") navigate("/dashboard");
-      else if (user.role === "doctor") navigate("/doctor-dashboard");
-      else setError("Access Denied: Not a staff member.");
+      // ✅ Redirect
+      if (user.role === "admin") {
+        navigate("/dashboard");
+      } else {
+        navigate("/doctor/dashboard"); // ✅ fixed
+      }
     } catch (err) {
-      setError("Invalid Staff Credentials");
+      setError(err.response?.data?.message || "Invalid Staff Credentials");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -46,9 +68,11 @@ export default function StaffLogin() {
         <p style={{ textAlign: "center", color: "#94a3b8", marginBottom: 20 }}>
           Doctors & Admins Only
         </p>
+
         {error && (
           <div style={{ color: "#ef4444", marginBottom: 15 }}>{error}</div>
         )}
+
         <form
           onSubmit={handleSubmit}
           style={{ display: "flex", flexDirection: "column", gap: 15 }}
@@ -60,6 +84,7 @@ export default function StaffLogin() {
             onChange={(e) => setForm({ ...form, email: e.target.value })}
             style={{ padding: 12, borderRadius: 8, border: "none" }}
           />
+
           <input
             type="password"
             placeholder="Password"
@@ -67,8 +92,10 @@ export default function StaffLogin() {
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             style={{ padding: 12, borderRadius: 8, border: "none" }}
           />
+
           <button
             type="submit"
+            disabled={loading}
             style={{
               padding: 12,
               background: "#0ea5e9",
@@ -77,9 +104,10 @@ export default function StaffLogin() {
               borderRadius: 8,
               fontWeight: "bold",
               cursor: "pointer",
+              opacity: loading ? 0.6 : 1,
             }}
           >
-            Login to Workspace
+            {loading ? "Logging in..." : "Login to Workspace"}
           </button>
         </form>
       </div>

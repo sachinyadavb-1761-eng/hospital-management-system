@@ -4,12 +4,14 @@ import { authAPI } from "../services/api";
 
 export default function Register() {
   const navigate = useNavigate();
+
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
-    role: "doctor",
+    role: "patient", // ✅ fixed (no dropdown)
   });
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -22,9 +24,10 @@ export default function Register() {
     e.preventDefault();
     setLoading(true);
     setError("");
+
     try {
       await authAPI.register(form);
-      navigate("/login");
+      navigate("/login"); // after register → login
     } catch (err) {
       setError(
         err.response?.data?.message || "Registration failed. Try again.",
@@ -36,21 +39,22 @@ export default function Register() {
 
   return (
     <div style={styles.page}>
+      {/* LEFT SIDE */}
       <div style={styles.left}>
         <div style={styles.brand}>
           <div style={styles.brandIcon}>✚</div>
           <span style={styles.brandName}>MediCore</span>
         </div>
+
         <div style={styles.heroText}>
           <h1 style={styles.heroHeading}>
-            Join
-            <br />
-            MediCore
-            <br />
-            Today
+            Join <br /> MediCore <br /> Today
           </h1>
-          <p style={styles.heroSub}>Create your account and get started.</p>
+          <p style={styles.heroSub}>
+            Create your patient account and get started.
+          </p>
         </div>
+
         <div style={styles.stats}>
           {[
             ["120+", "Doctors"],
@@ -65,14 +69,16 @@ export default function Register() {
         </div>
       </div>
 
+      {/* RIGHT SIDE */}
       <div style={styles.right}>
         <div style={styles.card}>
-          <h2 style={styles.cardTitle}>Create Account</h2>
+          <h2 style={styles.cardTitle}>Create Patient Account</h2>
           <p style={styles.cardSub}>Fill in details to register</p>
 
           {error && <div style={styles.errorBox}>{error}</div>}
 
           <form onSubmit={handleSubmit} style={styles.form}>
+            {/* Name */}
             <div style={styles.field}>
               <label style={styles.label}>Full Name</label>
               <input
@@ -81,10 +87,12 @@ export default function Register() {
                 name="name"
                 value={form.name}
                 onChange={handleChange}
-                placeholder="Dr. John Smith"
+                placeholder="Enter your name"
                 required
               />
             </div>
+
+            {/* Email */}
             <div style={styles.field}>
               <label style={styles.label}>Email</label>
               <input
@@ -93,10 +101,12 @@ export default function Register() {
                 name="email"
                 value={form.email}
                 onChange={handleChange}
-                placeholder="doctor@hospital.com"
+                placeholder="your@email.com"
                 required
               />
             </div>
+
+            {/* Password */}
             <div style={styles.field}>
               <label style={styles.label}>Password</label>
               <input
@@ -109,20 +119,8 @@ export default function Register() {
                 required
               />
             </div>
-            {/* ✅ Role Select */}
-            <div style={styles.field}>
-              <label style={styles.label}>Role</label>
-              <select
-                name="role"
-                value={form.role}
-                onChange={handleChange}
-                style={styles.select}
-              >
-                <option value="admin">Admin</option>
-                <option value="doctor">Doctor</option>
-              </select>
-            </div>
 
+            {/* Submit */}
             <button
               type="submit"
               style={{ ...styles.btn, ...(loading ? styles.btnDisabled : {}) }}
@@ -143,6 +141,8 @@ export default function Register() {
     </div>
   );
 }
+
+/* ================== STYLES ================== */
 
 const styles = {
   page: {
@@ -172,7 +172,7 @@ const styles = {
     justifyContent: "center",
     fontWeight: "bold",
   },
-  brandName: { fontSize: 22, fontWeight: 700, letterSpacing: "-0.5px" },
+  brandName: { fontSize: 22, fontWeight: 700 },
   heroText: {
     flex: 1,
     display: "flex",
@@ -180,18 +180,17 @@ const styles = {
     justifyContent: "center",
   },
   heroHeading: {
-    fontSize: 52,
+    fontSize: 48,
     fontWeight: 800,
     lineHeight: 1.1,
-    letterSpacing: "-1px",
-    margin: 0,
     marginBottom: 16,
   },
-  heroSub: { fontSize: 17, opacity: 0.8, margin: 0 },
+  heroSub: { fontSize: 16, opacity: 0.8 },
   stats: { display: "flex", gap: 40 },
   statItem: { display: "flex", flexDirection: "column" },
-  statVal: { fontSize: 28, fontWeight: 800 },
-  statLabel: { fontSize: 13, opacity: 0.7, marginTop: 2 },
+  statVal: { fontSize: 26, fontWeight: 800 },
+  statLabel: { fontSize: 13, opacity: 0.7 },
+
   right: {
     flex: 1,
     display: "flex",
@@ -208,67 +207,57 @@ const styles = {
     boxShadow: "0 8px 40px rgba(0,0,0,0.10)",
   },
   cardTitle: {
-    margin: 0,
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: 800,
     color: "#0f172a",
-    letterSpacing: "-0.5px",
   },
-  cardSub: { color: "#64748b", fontSize: 15, margin: "6px 0 28px" },
+  cardSub: { color: "#64748b", marginBottom: 24 },
+
   errorBox: {
     background: "#fef2f2",
     border: "1px solid #fecaca",
     color: "#dc2626",
     borderRadius: 10,
-    padding: "12px 16px",
-    fontSize: 14,
-    marginBottom: 20,
+    padding: "10px",
+    marginBottom: 16,
   },
-  form: { display: "flex", flexDirection: "column", gap: 20 },
-  field: { display: "flex", flexDirection: "column", gap: 6 },
+
+  form: { display: "flex", flexDirection: "column", gap: 18 },
+  field: { display: "flex", flexDirection: "column", gap: 5 },
+
   label: {
     fontSize: 13,
     fontWeight: 600,
     color: "#374151",
-    textTransform: "uppercase",
-    letterSpacing: "0.5px",
   },
+
   input: {
-    padding: "12px 16px",
+    padding: "12px",
     borderRadius: 10,
-    border: "1.5px solid #e2e8f0",
-    fontSize: 15,
-    outline: "none",
-    color: "#0f172a",
-    transition: "border-color 0.2s",
+    border: "1px solid #e2e8f0",
   },
-  select: {
-    padding: "12px 16px",
-    borderRadius: 10,
-    border: "1.5px solid #e2e8f0",
-    fontSize: 15,
-    outline: "none",
-    color: "#0f172a",
-    background: "#f8fafc",
-  },
+
   btn: {
-    marginTop: 8,
+    marginTop: 10,
     padding: "14px",
     borderRadius: 12,
     border: "none",
     background: "linear-gradient(135deg, #0f4c81, #1a73e8)",
     color: "#fff",
-    fontSize: 16,
     fontWeight: 700,
     cursor: "pointer",
-    letterSpacing: "0.2px",
   },
-  btnDisabled: { opacity: 0.6, cursor: "not-allowed" },
+
+  btnDisabled: { opacity: 0.6 },
+
   footer: {
     textAlign: "center",
-    marginTop: 24,
-    color: "#64748b",
-    fontSize: 14,
+    marginTop: 20,
   },
-  link: { color: "#1a73e8", fontWeight: 600, cursor: "pointer" },
+
+  link: {
+    color: "#1a73e8",
+    cursor: "pointer",
+    fontWeight: 600,
+  },
 };
