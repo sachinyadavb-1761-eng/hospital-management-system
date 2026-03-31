@@ -3,30 +3,31 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import DoctorDashboard from "./pages/DoctorDashboard";
+import Home from "./pages/Home";
 
-// ✅ Sirf login users ke liye
 function PrivateRoute({ children }) {
   const token = localStorage.getItem("token");
   return token ? children : <Navigate to="/login" />;
 }
 
-// ✅ Role ke hisaab se sahi dashboard pe bhejo
 function RoleRoute() {
   const token = localStorage.getItem("token");
   if (!token) return <Navigate to="/login" />;
-
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-  if (user.role === "admin") {
-    return <Navigate to="/dashboard" />;
-  } else {
-    return <Navigate to="/doctor-dashboard" />;
-  }
+  return user.role === "admin" ? (
+    <Navigate to="/dashboard" />
+  ) : (
+    <Navigate to="/doctor-dashboard" />
+  );
 }
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* ✅ Public Landing Page */}
+        <Route path="/" element={<Home />} />
+
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
@@ -50,9 +51,8 @@ function App() {
           }
         />
 
-        {/* Auto redirect based on role */}
-        <Route path="/" element={<RoleRoute />} />
-        <Route path="*" element={<Navigate to="/login" />} />
+        <Route path="/home" element={<RoleRoute />} />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
   );
