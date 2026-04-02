@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import Patient from "../models/Patient.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
@@ -13,14 +14,28 @@ export const registerUser = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const userRole = role || "patient";
 
-    // ✅ Fix: default role "patient" hona chahiye, "doctor" nahi
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
-      role: role || "patient",
+      role: userRole,
     });
+
+    // ✅ Patient register kare toh Patient record bhi auto-create karo
+    if (userRole === "patient") {
+      await Patient.create({
+        name,
+        email,
+        phone: "0000000000",
+        age: 0,
+        gender: "male",
+        bloodGroup: "",
+        address: "",
+        userId: user._id,
+      });
+    }
 
     res.status(201).json({
       message: "User registered successfully",

@@ -2,29 +2,22 @@ import mongoose from "mongoose";
 
 const patientSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true,
-    },
-    age: {
-      type: Number,
-      required: true,
-    },
+    name: { type: String, required: true },
+    email: { type: String, required: true },
+    phone: { type: String, default: "" },
+    age: { type: Number, default: 0 },
     gender: {
       type: String,
       enum: ["male", "female", "other"],
-      required: true,
+      default: "male",
     },
-    phone: {
-      type: String,
-      required: true,
-    },
-    address: {
-      type: String,
-    },
-    medicalHistory: {
-      type: String, // purani bimariyan
-      default: "None",
+    bloodGroup: { type: String, default: "" },
+    address: { type: String, default: "" },
+    // ✅ User account se link — patient dhundne ke liye
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
   },
   { timestamps: true },

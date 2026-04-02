@@ -22,7 +22,6 @@ export default function PatientDashboard() {
   const [myPatient, setMyPatient] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Booking form
   const [bookForm, setBookForm] = useState({
     doctorId: "",
     date: "",
@@ -30,10 +29,7 @@ export default function PatientDashboard() {
     notes: "",
   });
   const [bookError, setBookError] = useState("");
-  const [bookSuccess, setBookSuccess] = useState("");
   const [booking, setBooking] = useState(false);
-
-  // Receipt modal
   const [receipt, setReceipt] = useState(null);
 
   useEffect(() => {
@@ -49,14 +45,13 @@ export default function PatientDashboard() {
       ]);
       setDoctors(docRes.data || []);
 
-      // Apna patient record dhundo email se
       const patients = patRes.data || [];
+      // ✅ userId se match karo (most reliable)
       const me = patients.find(
-        (p) => p.email === user.email || p.name === user.name,
+        (p) => p.userId === user._id || p.email === user.email,
       );
       setMyPatient(me || null);
 
-      // Appointments
       if (me) {
         const apptRes = await appointmentsAPI.getByPatient(me._id);
         setMyAppointments(apptRes.data || []);
@@ -82,14 +77,13 @@ export default function PatientDashboard() {
       return;
     }
     if (!myPatient) {
-      setBookError("Aapka patient record nahi mila. Admin se contact karein.");
+      setBookError(
+        "Aapka patient profile nahi mila. Please logout karke dobara register karein.",
+      );
       return;
     }
-
     setBooking(true);
     setBookError("");
-    setBookSuccess("");
-
     try {
       const payload = {
         doctor: bookForm.doctorId,
@@ -100,11 +94,8 @@ export default function PatientDashboard() {
         fee: selectedDoctor?.fee || 0,
         status: "pending",
       };
-
       const res = await appointmentsAPI.create(payload);
       const appt = res.data.appointment;
-
-      // ✅ Receipt generate karo
       setReceipt({
         appointmentId: appt._id,
         doctorName: selectedDoctor?.name,
@@ -113,9 +104,7 @@ export default function PatientDashboard() {
         time: bookForm.time,
         fee: selectedDoctor?.fee || 0,
         patientName: myPatient.name,
-        status: "Pending Confirmation",
       });
-
       setBookForm({ doctorId: "", date: "", time: "", notes: "" });
       await fetchData();
     } catch (err) {
@@ -127,7 +116,6 @@ export default function PatientDashboard() {
 
   return (
     <div style={s.shell}>
-      {/* ── Sidebar ── */}
       <aside style={s.sidebar}>
         <div style={s.logo}>
           <span style={s.logoIcon}>✚</span>
@@ -158,7 +146,6 @@ export default function PatientDashboard() {
         </div>
       </aside>
 
-      {/* ── Main ── */}
       <main style={s.main}>
         <div style={s.header}>
           <div>
@@ -173,27 +160,21 @@ export default function PatientDashboard() {
           <div style={s.loader}>Loading…</div>
         ) : (
           <>
-            {/* ── BOOK APPOINTMENT ── */}
             {activeTab === "book" && (
               <div style={s.bookGrid}>
-                {/* Form */}
                 <div style={s.bookCard}>
                   <h2 style={s.cardTitle}>New Appointment</h2>
 
                   {bookError && <div style={s.errorBox}>⚠ {bookError}</div>}
-                  {bookSuccess && (
-                    <div style={s.successBox}>✅ {bookSuccess}</div>
-                  )}
 
                   {!myPatient && (
                     <div style={s.warnBox}>
-                      ⚠ Aapka patient profile nahi mila. Admin se request
+                      ⚠ Patient profile nahi mila. Logout karke dobara register
                       karein.
                     </div>
                   )}
 
                   <form onSubmit={handleBook} style={s.form}>
-                    {/* Doctor select */}
                     <div style={s.fieldGroup}>
                       <label style={s.label}>Doctor Select Karein *</label>
                       <select
@@ -212,7 +193,6 @@ export default function PatientDashboard() {
                       </select>
                     </div>
 
-                    {/* Doctor preview */}
                     {selectedDoctor && (
                       <div style={s.doctorPreview}>
                         <div style={s.doctorAvatar}>
@@ -224,7 +204,7 @@ export default function PatientDashboard() {
                           </div>
                           <div style={{ fontSize: 13, color: "#64748b" }}>
                             {selectedDoctor.specialization} •{" "}
-                            {selectedDoctor.experience} yrs exp
+                            {selectedDoctor.experience} yrs
                           </div>
                           <div
                             style={{
@@ -233,7 +213,7 @@ export default function PatientDashboard() {
                               fontWeight: 700,
                             }}
                           >
-                            Consultation Fee: ₹{selectedDoctor.fee || 500}
+                            Fee: ₹{selectedDoctor.fee || 500}
                           </div>
                         </div>
                       </div>
@@ -283,7 +263,6 @@ export default function PatientDashboard() {
                   </form>
                 </div>
 
-                {/* Doctors list */}
                 <div>
                   <h3
                     style={{
@@ -295,48 +274,55 @@ export default function PatientDashboard() {
                   >
                     Available Doctors
                   </h3>
-                  <div style={s.doctorList}>
-                    {doctors.map((d) => (
-                      <div
-                        key={d._id}
-                        style={{
-                          ...s.doctorListCard,
-                          ...(bookForm.doctorId === d._id
-                            ? s.doctorListCardActive
-                            : {}),
-                        }}
-                        onClick={() =>
-                          setBookForm({ ...bookForm, doctorId: d._id })
-                        }
-                      >
-                        <div style={{ ...s.docAvatar, background: "#0ea5e9" }}>
-                          {d.name[0]}
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: 14 }}>
-                            {d.name}
-                          </div>
-                          <div style={{ fontSize: 12, color: "#64748b" }}>
-                            {d.specialization}
-                          </div>
+                  {doctors.length === 0 ? (
+                    <div style={s.emptyDoctors}>
+                      Koi doctor available nahi hai abhi.
+                    </div>
+                  ) : (
+                    <div style={s.doctorList}>
+                      {doctors.map((d) => (
+                        <div
+                          key={d._id}
+                          style={{
+                            ...s.doctorListCard,
+                            ...(bookForm.doctorId === d._id
+                              ? s.doctorListCardActive
+                              : {}),
+                          }}
+                          onClick={() =>
+                            setBookForm({ ...bookForm, doctorId: d._id })
+                          }
+                        >
                           <div
-                            style={{
-                              fontSize: 13,
-                              color: "#10b981",
-                              fontWeight: 600,
-                            }}
+                            style={{ ...s.docAvatar, background: "#0ea5e9" }}
                           >
-                            ₹{d.fee || 500}
+                            {d.name[0]}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: 14 }}>
+                              {d.name}
+                            </div>
+                            <div style={{ fontSize: 12, color: "#64748b" }}>
+                              {d.specialization}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 13,
+                                color: "#10b981",
+                                fontWeight: 600,
+                              }}
+                            >
+                              ₹{d.fee || 500}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* ── MY APPOINTMENTS ── */}
             {activeTab === "myappointments" && (
               <div style={s.tableWrap}>
                 <table style={s.table}>
@@ -360,7 +346,7 @@ export default function PatientDashboard() {
                     {myAppointments.length === 0 ? (
                       <tr>
                         <td colSpan={6} style={s.emptyCell}>
-                          Abhi tak koi appointment nahi hai.{" "}
+                          Abhi tak koi appointment nahi.{" "}
                           <span
                             style={{ color: "#0ea5e9", cursor: "pointer" }}
                             onClick={() => setActiveTab("book")}
@@ -400,84 +386,83 @@ export default function PatientDashboard() {
         )}
       </main>
 
-      {/* ── Receipt Modal ── */}
       {receipt && (
         <div style={s.overlay} onClick={() => setReceipt(null)}>
           <div style={s.receiptModal} onClick={(e) => e.stopPropagation()}>
-            <div style={s.receiptHeader}>
-              <div style={s.receiptIcon}>🎉</div>
-              <h2 style={s.receiptTitle}>Appointment Booked!</h2>
-              <p style={s.receiptSub}>Confirmation Receipt</p>
+            <div style={{ textAlign: "center", marginBottom: 24 }}>
+              <div style={{ fontSize: 48 }}>🎉</div>
+              <h2
+                style={{ margin: "8px 0 4px", fontSize: 22, fontWeight: 800 }}
+              >
+                Appointment Booked!
+              </h2>
+              <p style={{ color: "#64748b", fontSize: 14 }}>
+                Confirmation Receipt
+              </p>
             </div>
-
-            <div style={s.receiptBody}>
-              <div style={s.receiptRow}>
-                <span style={s.receiptKey}>Appointment ID</span>
-                <span style={s.receiptVal}>
-                  #{receipt.appointmentId?.slice(-8).toUpperCase()}
-                </span>
-              </div>
-              <div style={s.receiptRow}>
-                <span style={s.receiptKey}>Patient</span>
-                <span style={s.receiptVal}>{receipt.patientName}</span>
-              </div>
-              <div style={s.receiptRow}>
-                <span style={s.receiptKey}>Doctor</span>
-                <span style={s.receiptVal}>{receipt.doctorName}</span>
-              </div>
-              <div style={s.receiptRow}>
-                <span style={s.receiptKey}>Specialization</span>
-                <span style={s.receiptVal}>{receipt.specialization}</span>
-              </div>
-              <div style={s.receiptRow}>
-                <span style={s.receiptKey}>Date</span>
-                <span style={s.receiptVal}>
-                  {new Date(receipt.date).toLocaleDateString("en-IN", {
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {[
+                [
+                  "Appointment ID",
+                  `#${receipt.appointmentId?.slice(-8).toUpperCase()}`,
+                ],
+                ["Patient", receipt.patientName],
+                ["Doctor", receipt.doctorName],
+                ["Specialization", receipt.specialization],
+                [
+                  "Date",
+                  new Date(receipt.date).toLocaleDateString("en-IN", {
                     weekday: "long",
                     year: "numeric",
                     month: "long",
                     day: "numeric",
-                  })}
-                </span>
-              </div>
-              <div style={s.receiptRow}>
-                <span style={s.receiptKey}>Time</span>
-                <span style={s.receiptVal}>{receipt.time}</span>
-              </div>
+                  }),
+                ],
+                ["Time", receipt.time],
+              ].map(([k, v]) => (
+                <div
+                  key={k}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    borderBottom: "1px solid #f1f5f9",
+                    paddingBottom: 8,
+                  }}
+                >
+                  <span style={{ color: "#64748b", fontSize: 14 }}>{k}</span>
+                  <span style={{ fontWeight: 600, fontSize: 14 }}>{v}</span>
+                </div>
+              ))}
               <div
                 style={{
-                  ...s.receiptRow,
+                  display: "flex",
+                  justifyContent: "space-between",
                   background: "#f0fdf4",
                   borderRadius: 8,
-                  padding: "10px 0",
+                  padding: "10px 8px",
                 }}
               >
-                <span style={{ ...s.receiptKey, fontWeight: 700 }}>
-                  Consultation Fee
-                </span>
+                <span style={{ fontWeight: 700 }}>Consultation Fee</span>
                 <span
-                  style={{
-                    ...s.receiptVal,
-                    color: "#10b981",
-                    fontWeight: 800,
-                    fontSize: 18,
-                  }}
+                  style={{ color: "#10b981", fontWeight: 800, fontSize: 18 }}
                 >
                   ₹{receipt.fee}
                 </span>
               </div>
-              <div style={s.receiptRow}>
-                <span style={s.receiptKey}>Status</span>
-                <span style={{ color: "#f59e0b", fontWeight: 700 }}>
-                  {receipt.status}
-                </span>
-              </div>
             </div>
-
-            <div style={s.receiptNote}>
-              📩 Please arrive 10 minutes early. Bring this confirmation.
+            <div
+              style={{
+                background: "#fef3c7",
+                color: "#92400e",
+                padding: 12,
+                borderRadius: 8,
+                fontSize: 13,
+                marginTop: 16,
+                textAlign: "center",
+              }}
+            >
+              📩 Please arrive 10 minutes early.
             </div>
-
             <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
               <button
                 style={s.receiptCloseBtn}
@@ -688,6 +673,13 @@ const s = {
     fontSize: 15,
     cursor: "pointer",
   },
+  emptyDoctors: {
+    padding: 20,
+    textAlign: "center",
+    color: "#94a3b8",
+    background: "#fff",
+    borderRadius: 12,
+  },
   doctorList: { display: "flex", flexDirection: "column", gap: 10 },
   doctorListCard: {
     display: "flex",
@@ -698,7 +690,6 @@ const s = {
     border: "1.5px solid #e2e8f0",
     background: "#fff",
     cursor: "pointer",
-    transition: "all 0.15s",
   },
   doctorListCardActive: {
     border: "1.5px solid #0ea5e9",
@@ -752,16 +743,6 @@ const s = {
     padding: "10px 14px",
     borderRadius: 8,
     fontSize: 13,
-    fontWeight: 500,
-    marginBottom: 4,
-  },
-  successBox: {
-    background: "#d1fae5",
-    color: "#065f46",
-    padding: "10px 14px",
-    borderRadius: 8,
-    fontSize: 13,
-    fontWeight: 500,
     marginBottom: 4,
   },
   warnBox: {
@@ -770,7 +751,6 @@ const s = {
     padding: "10px 14px",
     borderRadius: 8,
     fontSize: 13,
-    fontWeight: 500,
     marginBottom: 4,
   },
   overlay: {
@@ -790,29 +770,6 @@ const s = {
     maxWidth: 460,
     width: "100%",
     boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
-  },
-  receiptHeader: { textAlign: "center", marginBottom: 24 },
-  receiptIcon: { fontSize: 48, marginBottom: 8 },
-  receiptTitle: { margin: 0, fontSize: 22, fontWeight: 800, color: "#0f172a" },
-  receiptSub: { color: "#64748b", fontSize: 14, margin: "4px 0 0" },
-  receiptBody: { display: "flex", flexDirection: "column", gap: 12 },
-  receiptRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "6px 0",
-    borderBottom: "1px solid #f1f5f9",
-  },
-  receiptKey: { color: "#64748b", fontSize: 14 },
-  receiptVal: { color: "#0f172a", fontSize: 14, fontWeight: 600 },
-  receiptNote: {
-    background: "#fef3c7",
-    color: "#92400e",
-    padding: "12px",
-    borderRadius: 8,
-    fontSize: 13,
-    marginTop: 16,
-    textAlign: "center",
   },
   receiptCloseBtn: {
     flex: 1,
