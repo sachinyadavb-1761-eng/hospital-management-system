@@ -7,7 +7,7 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// ─── Request Interceptor: JWT token attach karo ───────────────────────────────
+// ─── Request Interceptor: JWT token attach ────────────────────────────────────
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
@@ -71,12 +71,16 @@ export const patientsAPI = {
 // ══════════════════════════════════════════════════════════════
 export const appointmentsAPI = {
   getAll: () => api.get("/appointments"),
+  // ✅ Doctor ke liye filtered appointments
+  getByDoctor: (doctorId) => api.get(`/appointments?doctorId=${doctorId}`),
+  // ✅ Patient ke liye filtered appointments
+  getByPatient: (patientId) => api.get(`/appointments?patientId=${patientId}`),
   getById: (id) => api.get(`/appointments/${id}`),
   create: (data) => api.post("/appointments", data),
   update: (id, data) => api.put(`/appointments/${id}`, data),
   delete: (id) => api.delete(`/appointments/${id}`),
-  getByDoctor: (doctorId) => api.get(`/appointments?doctorId=${doctorId}`),
-  getByPatient: (patientId) => api.get(`/appointments?patientId=${patientId}`),
+  // ✅ Admin analytics
+  getAnalytics: () => api.get("/appointments/analytics"),
 };
 
 export default api;

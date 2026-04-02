@@ -4,12 +4,7 @@ import { authAPI } from "../services/api";
 
 export default function Login() {
   const navigate = useNavigate();
-
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-  });
-
+  const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -22,12 +17,10 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setError("");
-
     try {
       const res = await authAPI.login(form);
       const { token, user } = res.data;
 
-      // ✅ Save data
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
 
@@ -37,7 +30,8 @@ export default function Login() {
       } else if (user.role === "doctor") {
         navigate("/doctor/dashboard");
       } else {
-        navigate("/"); // patient stays on home
+        // ✅ Patient → Patient Dashboard
+        navigate("/patient/dashboard");
       }
     } catch (err) {
       setError(
@@ -50,22 +44,22 @@ export default function Login() {
 
   return (
     <div style={styles.page}>
-      {/* LEFT SIDE */}
+      {/* LEFT */}
       <div style={styles.left}>
         <div style={styles.brand}>
           <div style={styles.brandIcon}>✚</div>
           <span style={styles.brandName}>MediCore</span>
         </div>
-
         <div style={styles.heroText}>
           <h1 style={styles.heroHeading}>
-            Patient <br /> Login
+            Patient
+            <br />
+            Login
           </h1>
           <p style={styles.heroSub}>
             Access your account and manage your health.
           </p>
         </div>
-
         <div style={styles.stats}>
           {[
             ["120+", "Doctors"],
@@ -80,16 +74,13 @@ export default function Login() {
         </div>
       </div>
 
-      {/* RIGHT SIDE */}
+      {/* RIGHT */}
       <div style={styles.right}>
         <div style={styles.card}>
           <h2 style={styles.cardTitle}>Sign In</h2>
           <p style={styles.cardSub}>Login to your account</p>
-
           {error && <div style={styles.errorBox}>{error}</div>}
-
           <form onSubmit={handleSubmit} style={styles.form}>
-            {/* Email */}
             <div style={styles.field}>
               <label style={styles.label}>Email</label>
               <input
@@ -102,8 +93,6 @@ export default function Login() {
                 required
               />
             </div>
-
-            {/* Password */}
             <div style={styles.field}>
               <label style={styles.label}>Password</label>
               <input
@@ -116,8 +105,6 @@ export default function Login() {
                 required
               />
             </div>
-
-            {/* Button */}
             <button
               type="submit"
               style={{ ...styles.btn, ...(loading ? styles.btnDisabled : {}) }}
@@ -126,11 +113,16 @@ export default function Login() {
               {loading ? "Signing in…" : "Sign In →"}
             </button>
           </form>
-
           <p style={styles.footer}>
             Don't have an account?{" "}
             <span style={styles.link} onClick={() => navigate("/register")}>
               Register
+            </span>
+          </p>
+          <p style={{ ...styles.footer, marginTop: 8 }}>
+            Staff member?{" "}
+            <span style={styles.link} onClick={() => navigate("/staff/login")}>
+              Staff Portal →
             </span>
           </p>
         </div>
@@ -138,8 +130,6 @@ export default function Login() {
     </div>
   );
 }
-
-/* ================== STYLES ================== */
 
 const styles = {
   page: {
@@ -170,34 +160,18 @@ const styles = {
     fontWeight: "bold",
   },
   brandName: { fontSize: 22, fontWeight: 700 },
-
   heroText: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
   },
-
-  heroHeading: {
-    fontSize: 48,
-    fontWeight: 800,
-    lineHeight: 1.1,
-  },
-
-  heroSub: {
-    fontSize: 16,
-    opacity: 0.8,
-    marginTop: 10,
-  },
-
+  heroHeading: { fontSize: 48, fontWeight: 800, lineHeight: 1.1 },
+  heroSub: { fontSize: 16, opacity: 0.8, marginTop: 10 },
   stats: { display: "flex", gap: 40 },
-
   statItem: { display: "flex", flexDirection: "column" },
-
   statVal: { fontSize: 26, fontWeight: 800 },
-
   statLabel: { fontSize: 13, opacity: 0.7 },
-
   right: {
     flex: 1,
     display: "flex",
@@ -205,7 +179,6 @@ const styles = {
     justifyContent: "center",
     padding: 40,
   },
-
   card: {
     background: "#fff",
     borderRadius: 20,
@@ -214,18 +187,8 @@ const styles = {
     maxWidth: 420,
     boxShadow: "0 8px 40px rgba(0,0,0,0.10)",
   },
-
-  cardTitle: {
-    fontSize: 26,
-    fontWeight: 800,
-    color: "#0f172a",
-  },
-
-  cardSub: {
-    color: "#64748b",
-    marginBottom: 24,
-  },
-
+  cardTitle: { fontSize: 26, fontWeight: 800, color: "#0f172a" },
+  cardSub: { color: "#64748b", marginBottom: 24 },
   errorBox: {
     background: "#fef2f2",
     border: "1px solid #fecaca",
@@ -234,31 +197,10 @@ const styles = {
     padding: "10px",
     marginBottom: 16,
   },
-
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 18,
-  },
-
-  field: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 5,
-  },
-
-  label: {
-    fontSize: 13,
-    fontWeight: 600,
-    color: "#374151",
-  },
-
-  input: {
-    padding: "12px",
-    borderRadius: 10,
-    border: "1px solid #e2e8f0",
-  },
-
+  form: { display: "flex", flexDirection: "column", gap: 18 },
+  field: { display: "flex", flexDirection: "column", gap: 5 },
+  label: { fontSize: 13, fontWeight: 600, color: "#374151" },
+  input: { padding: "12px", borderRadius: 10, border: "1px solid #e2e8f0" },
   btn: {
     marginTop: 10,
     padding: "14px",
@@ -269,19 +211,7 @@ const styles = {
     fontWeight: 700,
     cursor: "pointer",
   },
-
-  btnDisabled: {
-    opacity: 0.6,
-  },
-
-  footer: {
-    textAlign: "center",
-    marginTop: 20,
-  },
-
-  link: {
-    color: "#1a73e8",
-    cursor: "pointer",
-    fontWeight: 600,
-  },
+  btnDisabled: { opacity: 0.6 },
+  footer: { textAlign: "center", marginTop: 20 },
+  link: { color: "#1a73e8", cursor: "pointer", fontWeight: 600 },
 };

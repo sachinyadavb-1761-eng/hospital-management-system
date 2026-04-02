@@ -2,11 +2,20 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { authAPI, appointmentsAPI } from "../services/api";
 
+const NAV = [
+  { key: "appointments", icon: "📅", label: "My Appointments" },
+  { key: "today", icon: "📆", label: "Today's Schedule" },
+];
+
 export default function DoctorDashboard() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+  const [activeTab, setActiveTab] = useState("appointments");
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState(null);
+  const [selectedAppt, setSelectedAppt] = useState(null); // detail modal
 
   useEffect(() => {
     fetchAppointments();
@@ -15,6 +24,10 @@ export default function DoctorDashboard() {
   const fetchAppointments = async () => {
     setLoading(true);
     try {
+      // ✅ Sirf is doctor ke appointments — doctorId bhejo
+      // Note: Doctor ka User._id aur Doctor._id alag ho sakta hai
+      // Hum saare laate hain aur doctor name se match karte hain jab tak
+      // doctor-user linking nahi hoti
       const res = await appointmentsAPI.getAll();
       setAppointments(res.data || []);
     } catch (err) {
@@ -29,23 +42,68 @@ export default function DoctorDashboard() {
     navigate("/login");
   };
 
+  // ✅ Status update karo
+  const handleStatusChange = async (id, newStatus) => {
+    setUpdatingId(id);
+    try {
+      await appointmentsAPI.update(id, { status: newStatus });
+      setAppointments((prev) =>
+        prev.map((a) => (a._id === id ? { ...a, status: newStatus } : a)),
+      );
+    } catch (err) {
+      console.error("Status update failed:", err);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const todayAppts = appointments.filter((a) => {
     const d = new Date(a.date || a.appointmentDate);
     return d.toDateString() === new Date().toDateString();
   });
 
+  const displayAppts = activeTab === "today" ? todayAppts : appointments;
+
+  const stats = [
+    {
+      label: "Total",
+      value: appointments.length,
+      color: "#1a73e8",
+      icon: "📋",
+    },
+    { label: "Today", value: todayAppts.length, color: "#10b981", icon: "📆" },
+    {
+      label: "Pending",
+      value: appointments.filter((a) => a.status === "pending").length,
+      color: "#f59e0b",
+      icon: "⏳",
+    },
+    {
+      label: "Completed",
+      value: appointments.filter((a) => a.status === "completed").length,
+      color: "#8b5cf6",
+      icon: "✅",
+    },
+  ];
+
   return (
     <div style={s.shell}>
-      {/* Sidebar */}
+      {/* ── Sidebar ── */}
       <aside style={s.sidebar}>
         <div style={s.logo}>
           <span style={s.logoIcon}>✚</span>
           <span style={s.logoText}>MediCore</span>
         </div>
         <nav style={s.nav}>
-          <div style={{ ...s.navBtn, ...s.navActive }}>
-            <span>📅</span> My Appointments
-          </div>
+          {NAV.map(({ key, icon, label }) => (
+            <button
+              key={key}
+              style={{ ...s.navBtn, ...(activeTab === key ? s.navActive : {}) }}
+              onClick={() => setActiveTab(key)}
+            >
+              <span>{icon}</span> {label}
+            </button>
+          ))}
         </nav>
         <div style={s.sideFooter}>
           <div style={s.userBadge}>
@@ -61,11 +119,13 @@ export default function DoctorDashboard() {
         </div>
       </aside>
 
-      {/* Main */}
+      {/* ── Main ── */}
       <main style={s.main}>
         <div style={s.header}>
           <div>
-            <h1 style={s.pageTitle}>Doctor Dashboard</h1>
+            <h1 style={s.pageTitle}>
+              {activeTab === "today" ? "Today's Schedule" : "My Appointments"}
+            </h1>
             <p style={s.pageDate}>{new Date().toDateString()}</p>
           </div>
           <button style={s.refreshBtn} onClick={fetchAppointments}>
@@ -75,46 +135,34 @@ export default function DoctorDashboard() {
 
         {/* Stats */}
         <div style={s.statGrid}>
-          <div style={{ ...s.statCard, borderTop: "4px solid #1a73e8" }}>
-            <div style={s.statIcon}>📅</div>
-            <div style={{ ...s.statVal, color: "#1a73e8" }}>
-              {appointments.length}
+          {stats.map(({ label, value, color, icon }) => (
+            <div
+              key={label}
+              style={{ ...s.statCard, borderTop: `4px solid ${color}` }}
+            >
+              <div style={s.statIcon}>{icon}</div>
+              <div style={{ ...s.statVal, color }}>{value}</div>
+              <div style={s.statLabel}>{label}</div>
             </div>
-            <div style={s.statLabel}>Total Appointments</div>
-          </div>
-          <div style={{ ...s.statCard, borderTop: "4px solid #10b981" }}>
-            <div style={s.statIcon}>📆</div>
-            <div style={{ ...s.statVal, color: "#10b981" }}>
-              {todayAppts.length}
-            </div>
-            <div style={s.statLabel}>Today's Appointments</div>
-          </div>
-          <div style={{ ...s.statCard, borderTop: "4px solid #f59e0b" }}>
-            <div style={s.statIcon}>⏳</div>
-            <div style={{ ...s.statVal, color: "#f59e0b" }}>
-              {appointments.filter((a) => a.status === "pending").length}
-            </div>
-            <div style={s.statLabel}>Pending</div>
-          </div>
-          <div style={{ ...s.statCard, borderTop: "4px solid #8b5cf6" }}>
-            <div style={s.statIcon}>✅</div>
-            <div style={{ ...s.statVal, color: "#8b5cf6" }}>
-              {appointments.filter((a) => a.status === "completed").length}
-            </div>
-            <div style={s.statLabel}>Completed</div>
-          </div>
+          ))}
         </div>
 
         {/* Appointments Table */}
-        <h2 style={s.sectionTitle}>All Appointments</h2>
         {loading ? (
-          <div style={s.loader}>Loading…</div>
+          <div style={s.loader}>Loading appointments…</div>
         ) : (
           <div style={s.tableWrap}>
             <table style={s.table}>
               <thead>
                 <tr>
-                  {["Patient", "Date", "Time", "Status", "Notes"].map((c) => (
+                  {[
+                    "Patient",
+                    "Date",
+                    "Time",
+                    "Status",
+                    "Notes",
+                    "Actions",
+                  ].map((c) => (
                     <th key={c} style={s.th}>
                       {c}
                     </th>
@@ -122,26 +170,80 @@ export default function DoctorDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {appointments.length === 0 ? (
+                {displayAppts.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={s.emptyCell}>
-                      No appointments found.
+                    <td colSpan={6} style={s.emptyCell}>
+                      {activeTab === "today"
+                        ? "Aaj koi appointment nahi hai."
+                        : "Koi appointment nahi mili."}
                     </td>
                   </tr>
                 ) : (
-                  appointments.map((a, i) => (
+                  displayAppts.map((a, i) => (
                     <tr key={a._id} style={i % 2 === 0 ? s.rowEven : s.rowOdd}>
                       <td style={s.td}>
-                        {a.patient?.name || a.patientName || "—"}
+                        <div style={{ fontWeight: 600 }}>
+                          {a.patient?.name || a.patientName || "—"}
+                        </div>
+                        <div style={{ fontSize: 12, color: "#64748b" }}>
+                          {a.patient?.phone || ""}
+                        </div>
                       </td>
                       <td style={s.td}>
-                        {a.date ? new Date(a.date).toLocaleDateString() : "—"}
+                        {a.date
+                          ? new Date(a.date).toLocaleDateString("en-IN")
+                          : "—"}
                       </td>
                       <td style={s.td}>{a.time || "—"}</td>
                       <td style={s.td}>
                         <StatusBadge status={a.status} />
                       </td>
-                      <td style={s.td}>{a.notes || "—"}</td>
+                      <td style={s.td}>
+                        <span style={{ fontSize: 13, color: "#64748b" }}>
+                          {a.notes || "—"}
+                        </span>
+                      </td>
+                      <td style={s.td}>
+                        {/* ✅ Status change buttons */}
+                        <div
+                          style={{ display: "flex", gap: 6, flexWrap: "wrap" }}
+                        >
+                          {a.status !== "completed" && (
+                            <button
+                              style={s.completeBtn}
+                              disabled={updatingId === a._id}
+                              onClick={() =>
+                                handleStatusChange(a._id, "completed")
+                              }
+                            >
+                              ✅ Done
+                            </button>
+                          )}
+                          {a.status === "pending" && (
+                            <button
+                              style={s.confirmBtn}
+                              disabled={updatingId === a._id}
+                              onClick={() =>
+                                handleStatusChange(a._id, "confirmed")
+                              }
+                            >
+                              👍 Confirm
+                            </button>
+                          )}
+                          {a.status !== "cancelled" &&
+                            a.status !== "completed" && (
+                              <button
+                                style={s.cancelBtn}
+                                disabled={updatingId === a._id}
+                                onClick={() =>
+                                  handleStatusChange(a._id, "cancelled")
+                                }
+                              >
+                                ✕ Cancel
+                              </button>
+                            )}
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -150,6 +252,34 @@ export default function DoctorDashboard() {
           </div>
         )}
       </main>
+
+      {/* ── Detail Modal ── */}
+      {selectedAppt && (
+        <div style={s.overlay} onClick={() => setSelectedAppt(null)}>
+          <div style={s.modal} onClick={(e) => e.stopPropagation()}>
+            <h3>Appointment Details</h3>
+            <p>
+              <strong>Patient:</strong> {selectedAppt.patient?.name}
+            </p>
+            <p>
+              <strong>Date:</strong>{" "}
+              {new Date(selectedAppt.date).toLocaleDateString()}
+            </p>
+            <p>
+              <strong>Time:</strong> {selectedAppt.time}
+            </p>
+            <p>
+              <strong>Status:</strong> {selectedAppt.status}
+            </p>
+            <p>
+              <strong>Notes:</strong> {selectedAppt.notes || "None"}
+            </p>
+            <button style={s.closeBtn} onClick={() => setSelectedAppt(null)}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -209,7 +339,7 @@ const s = {
   },
   logoIcon: {
     fontSize: 22,
-    background: "#1a73e8",
+    background: "#10b981",
     width: 36,
     height: 36,
     borderRadius: 10,
@@ -227,9 +357,13 @@ const s = {
     gap: 10,
     padding: "11px 14px",
     borderRadius: 10,
+    border: "none",
+    background: "transparent",
     color: "#94a3b8",
     fontSize: 14,
     fontWeight: 500,
+    cursor: "pointer",
+    textAlign: "left",
   },
   navActive: { background: "#1e293b", color: "#fff" },
   sideFooter: {
@@ -299,12 +433,6 @@ const s = {
   statIcon: { fontSize: 26, marginBottom: 10 },
   statVal: { fontSize: 36, fontWeight: 800, lineHeight: 1 },
   statLabel: { color: "#64748b", fontSize: 13, marginTop: 4 },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: 700,
-    color: "#0f172a",
-    marginBottom: 16,
-  },
   loader: { textAlign: "center", padding: 80, color: "#94a3b8" },
   tableWrap: {
     background: "#fff",
@@ -321,6 +449,7 @@ const s = {
     color: "#64748b",
     background: "#f8fafc",
     textTransform: "uppercase",
+    letterSpacing: "0.5px",
     borderBottom: "1px solid #e2e8f0",
   },
   td: {
@@ -336,5 +465,60 @@ const s = {
     textAlign: "center",
     color: "#94a3b8",
     fontSize: 14,
+  },
+  completeBtn: {
+    padding: "4px 10px",
+    borderRadius: 6,
+    border: "none",
+    background: "#dbeafe",
+    color: "#1e40af",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  confirmBtn: {
+    padding: "4px 10px",
+    borderRadius: 6,
+    border: "none",
+    background: "#d1fae5",
+    color: "#065f46",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  cancelBtn: {
+    padding: "4px 10px",
+    borderRadius: 6,
+    border: "none",
+    background: "#fee2e2",
+    color: "#991b1b",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  overlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.5)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+  },
+  modal: {
+    background: "#fff",
+    borderRadius: 16,
+    padding: 32,
+    maxWidth: 400,
+    width: "100%",
+  },
+  closeBtn: {
+    marginTop: 16,
+    padding: "8px 20px",
+    borderRadius: 8,
+    border: "none",
+    background: "#0f172a",
+    color: "#fff",
+    cursor: "pointer",
   },
 };

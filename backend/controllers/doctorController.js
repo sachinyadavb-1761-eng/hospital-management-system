@@ -1,66 +1,149 @@
-import Doctor from "../models/Doctor.js";
+import Appointment from "../models/Appointment.js";
 
-// @desc  Naya doctor add karo
-// @route POST /api/doctors
-export const createDoctor = async (req, res) => {
+// ─── Create Appointment ───────────────────────────────────────────────────────
+export const createAppointment = async (req, res) => {
   try {
-    const doctor = await Doctor.create(req.body);
-    res.status(201).json({ message: "Doctor added successfully", doctor });
+    const appointment = await Appointment.create(req.body);
+    const populated = await appointment.populate([
+      { path: "doctor", select: "name specialization fee" },
+      { path: "patient", select: "name age" },
+    ]);
+    res
+      .status(201)
+      .json({ message: "Appointment booked!", appointment: populated });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// @desc  Sabke doctors dekho
-// @route GET /api/doctors
-export const getAllDoctors = async (req, res) => {
+// ─── Get All Appointments ─────────────────────────────────────────────────────
+// ✅ Admin: saare appointments | Doctor: sirf apne | Patient: sirf apne
+export const getAllAppointments = async (req, res) => {
   try {
-    const doctors = await Doctor.find();
-    res.status(200).json(doctors);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+    let filter = {};
 
-// @desc  Ek doctor dekho
-// @route GET /api/doctors/:id
-export const getDoctorById = async (req, res) => {
-  try {
-    const doctor = await Doctor.findById(req.params.id);
-    if (!doctor) {
-      return res.status(404).json({ message: "Doctor nahi mila" });
+    if (req.user.role === "doctor") {
+      // Doctor model se match karna hai — doctor field ObjectId hai
+      // Hum doctorId query param se bhi filter kar sakte hain
+      const { doctorId } = req.query;
+      if (doctorId) {
+        filter.doctor = doctorId;
+      }
+    } else if (req.user.role === "patient") {
+      const { patientId } = req.query;
+      if (patientId) {
+        filter.patient = patientId;
+      }
     }
-    res.status(200).json(doctor);
+    // admin: no filter — sab milega
+
+    const appointments = await Appointment.find(filter)
+      .populate("doctor", "name specialization fee")
+      .populate("patient", "name age phone")
+      .sort({ date: -1 });
+
+    res.status(200).json(appointments);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// @desc  Doctor update karo
-// @route PUT /api/doctors/:id
-export const updateDoctor = async (req, res) => {
+// ─── Get One Appointment ──────────────────────────────────────────────────────
+export const getAppointmentById = async (req, res) => {
   try {
-    const doctor = await Doctor.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
+    const appointment = await Appointment.findById(req.params.id)
+      .populate("doctor", "name specialization fee")
+      .populate("patient", "name age phone");
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+    res.status(200).json(appointment);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ─── Update Appointment ───────────────────────────────────────────────────────
+export const updateAppointment = async (req, res) => {
+  try {
+    const appointment = await Appointment.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true },
+    )
+      .populate("doctor", "name specialization")
+      .populate("patient", "name age");
+
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+    res.status(200).json({ message: "Appointment updated!", appointment });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ─── Delete Appointment ───────────────────────────────────────────────────────
+export const deleteAppointment = async (req, res) => {
+  try {
+    const appointment = await Appointment.findByIdAndDelete(req.params.id);
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+    res.status(200).json({ message: "Appointment cancelled!" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ─── Analytics (Admin only) ───────────────────────────────────────────────────
+export const getAnalytics = async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const [total, todayCount, pending, completed, cancelled] =
+      await Promise.all([
+        Appointment.countDocuments(),
+        Appointment.countDocuments({ date: { $gte: today, $lt: tomorrow } }),
+        Appointment.countDocuments({ status: "pending" }),
+        Appointment.countDocuments({ status: "completed" }),
+        Appointment.countDocuments({ status: "cancelled" }),
+      ]);
+
+    // Total earnings from completed appointments
+    const earningsResult = await Appointment.aggregate([
+      { $match: { status: "completed" } },
+      { $group: { _id: null, total: { $sum: "$fee" } } },
+    ]);
+    const totalEarnings = earningsResult[0]?.total || 0;
+
+    // Busiest doctor
+    const busiestDoctor = await Appointment.aggregate([
+      { $group: { _id: "$doctor", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 1 },
+      {
+        $lookup: {
+          from: "doctors",
+          localField: "_id",
+          foreignField: "_id",
+          as: "doctorInfo",
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      total,
+      todayCount,
+      pending,
+      completed,
+      cancelled,
+      totalEarnings,
+      busiestDoctor: busiestDoctor[0]?.doctorInfo[0]?.name || "N/A",
     });
-    if (!doctor) {
-      return res.status(404).json({ message: "Doctor nahi mila" });
-    }
-    res.status(200).json({ message: "Doctor updated", doctor });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// @desc  Doctor delete karo
-// @route DELETE /api/doctors/:id
-export const deleteDoctor = async (req, res) => {
-  try {
-    const doctor = await Doctor.findByIdAndDelete(req.params.id);
-    if (!doctor) {
-      return res.status(404).json({ message: "Doctor nahi mila" });
-    }
-    res.status(200).json({ message: "Doctor deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

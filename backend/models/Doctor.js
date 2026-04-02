@@ -8,11 +8,11 @@ const doctorSchema = new mongoose.Schema(
     },
     specialization: {
       type: String,
-      required: true, // e.g. Cardiologist, Dentist
+      required: true,
     },
     experience: {
       type: Number,
-      required: true, // years mein
+      required: true,
     },
     phone: {
       type: String,
@@ -23,9 +23,14 @@ const doctorSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    // ✅ fee field add kiya — appointment booking ke liye zaroori
+    fee: {
+      type: Number,
+      default: 500,
+    },
     available: {
       type: Boolean,
-      default: true, // doctor available hai ya nahi
+      default: true,
     },
   },
   { timestamps: true },

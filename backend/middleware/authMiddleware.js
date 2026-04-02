@@ -1,7 +1,8 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
-const protect = async (req, res, next) => {
+// ─── Protect: Token verify karo ───────────────────────────────────────────────
+export const protect = async (req, res, next) => {
   let token;
 
   if (
@@ -14,32 +15,23 @@ const protect = async (req, res, next) => {
       req.user = await User.findById(decoded.id).select("-password");
       next();
     } catch (error) {
-      // 👇 YAHAN ADD KARO (catch block ke andar)
-      console.log("=== TOKEN DEBUG ===");
-      console.log("Token jo aaya:", token);
-      console.log("Secret:", process.env.JWT_SECRET);
-      console.log("Error:", error.message);
-      console.log("===================");
-      return res
-        .status(401)
-        .json({ message: "Token invalid hai, access nahi milega" });
+      return res.status(401).json({ message: "Not authorized, token failed" });
     }
-  } else {
-    return res
-      .status(401)
-      .json({ message: "Token nahi hai, access nahi milega" });
+  }
+
+  if (!token) {
+    return res.status(401).json({ message: "Not authorized, no token" });
   }
 };
 
-const authorizeRoles = (...roles) => {
+// ─── Authorize Roles: Multiple roles support ──────────────────────────────────
+export const authorizeRoles = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
-        message: `Role '${req.user.role}' ko ye karne ki permission nahi hai`,
+        message: `Access denied. Required role: ${roles.join(" or ")}`,
       });
     }
     next();
   };
 };
-
-export { protect, authorizeRoles };
