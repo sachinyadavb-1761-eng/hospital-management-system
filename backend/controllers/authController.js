@@ -4,6 +4,26 @@ import Doctor from "../models/Doctor.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
+// ─── Shared: verify credentials and generate token ───────────────────────────
+async function verifyAndSign(email, password) {
+  const user = await User.findOne({ email });
+  if (!user) throw { status: 404, message: "User not found" };
+
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch) throw { status: 400, message: "Invalid credentials" };
+
+  const token = jwt.sign(
+    { id: user._id, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: "30d" },
+  );
+
+  return {
+    token,
+    user: { _id: user._id, name: user.name, email: user.email, role: user.role },
+  };
+}
+
 // ─── Register ─────────────────────────────────────────────────────────────────
 export const registerUser = async (req, res) => {
   try {
@@ -24,7 +44,6 @@ export const registerUser = async (req, res) => {
       role: userRole,
     });
 
-    // ✅ Patient register kare toh Patient record bhi auto-create karo
     if (userRole === "patient") {
       await Patient.create({
         name,
@@ -38,7 +57,6 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    // ✅ Doctor register kare toh Doctor record bhi auto-create karo
     if (userRole === "doctor") {
       await Doctor.create({
         name,
@@ -53,50 +71,72 @@ export const registerUser = async (req, res) => {
 
     res.status(201).json({
       message: "User registered successfully",
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: { _id: user._id, name: user.name, email: user.email, role: user.role },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// ─── Login ────────────────────────────────────────────────────────────────────
+// ─── Patient Login — POST /api/auth/login ────────────────────────────────────
 export const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { token, user } = await verifyAndSign(req.body.email, req.body.password);
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    if (user.role !== "patient") {
+      return res.status(403).json({
+        message:
+          "This login is for patients only. Please use the Doctor Login or Admin Login page.",
+      });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: "Invalid credentials" });
+    res.status(200).json({ message: "Login successful", token, user });
+  } catch (err) {
+    const status = err.status || 500;
+    res.status(status).json({ message: err.message });
+  }
+};
+
+// ─── Doctor Login — POST /api/auth/doctor-login ──────────────────────────────
+export const loginDoctor = async (req, res) => {
+  try {
+    const { token, user } = await verifyAndSign(req.body.email, req.body.password);
+
+    if (user.role !== "doctor") {
+      return res.status(403).json({
+        message:
+          user.role === "patient"
+            ? "Patients must use the Patient Login page."
+            : "Not authorized as a doctor.",
+      });
     }
 
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "30d" },
-    );
+    res.status(200).json({ message: "Doctor login successful", token, user });
+  } catch (err) {
+    const status = err.status || 500;
+    res.status(status).json({ message: err.message });
+  }
+};
 
-    res.status(200).json({
-      message: "Login successful",
-      token,
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+// ─── Admin Login — POST /api/auth/admin-login ────────────────────────────────
+export const loginAdmin = async (req, res) => {
+  try {
+    const { token, user } = await verifyAndSign(req.body.email, req.body.password);
+
+    if (user.role !== "admin") {
+      return res.status(403).json({
+        message:
+          user.role === "patient"
+            ? "Patients must use the Patient Login page."
+            : user.role === "doctor"
+              ? "Doctors must use the Doctor Login page."
+              : "Not authorized as an admin.",
+      });
+    }
+
+    res.status(200).json({ message: "Admin login successful", token, user });
+  } catch (err) {
+    const status = err.status || 500;
+    res.status(status).json({ message: err.message });
   }
 };

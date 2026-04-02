@@ -148,12 +148,6 @@ export default function Home() {
               </>
             ) : (
               <>
-                <button
-                  style={s.staffLink}
-                  onClick={() => navigate("/staff/login")}
-                >
-                  Staff Portal
-                </button>
                 <button style={s.loginBtn} onClick={() => navigate("/login")}>
                   Login
                 </button>
@@ -339,6 +333,22 @@ export default function Home() {
         <div style={s.footerInner}>
           <span style={{ color: "#fff", fontWeight: 800 }}>MediCore</span>
           <p style={s.footerCopy}>© 2026 MediCore. All rights reserved.</p>
+          <div style={s.footerStaffLinks}>
+            <span style={s.footerStaffLabel}>Staff Access:</span>
+            <button
+              style={s.footerStaffBtn}
+              onClick={() => navigate("/doctor-login")}
+            >
+              🩺 Doctor Login
+            </button>
+            <span style={{ color: "#334155" }}>·</span>
+            <button
+              style={s.footerStaffBtn}
+              onClick={() => navigate("/admin-login")}
+            >
+              🔐 Admin Login
+            </button>
+          </div>
         </div>
       </footer>
     </div>
@@ -687,4 +697,24 @@ const s = {
   },
   footer: { background: "#0f172a", padding: "40px", textAlign: "center" },
   footerCopy: { color: "#64748b", fontSize: 12, marginTop: 10 },
+  footerStaffLinks: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    marginTop: 16,
+    paddingTop: 16,
+    borderTop: "1px solid #1e293b",
+  },
+  footerStaffLabel: { color: "#475569", fontSize: 12 },
+  footerStaffBtn: {
+    background: "transparent",
+    border: "1px solid #1e293b",
+    color: "#64748b",
+    fontSize: 12,
+    fontWeight: 600,
+    padding: "5px 12px",
+    borderRadius: 20,
+    cursor: "pointer",
+  },
 };

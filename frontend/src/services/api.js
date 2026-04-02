@@ -36,7 +36,9 @@ api.interceptors.response.use(
 // AUTH
 // ══════════════════════════════════════════════════════════════
 export const authAPI = {
-  login: (credentials) => api.post("/auth/login", credentials),
+  login: (credentials) => api.post("/auth/login", credentials),          // patient
+  loginDoctor: (credentials) => api.post("/auth/doctor-login", credentials), // doctor
+  loginAdmin: (credentials) => api.post("/auth/admin-login", credentials),   // admin
   register: (userData) => api.post("/auth/register", userData),
   logout: () => {
     localStorage.removeItem("token");

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authAPI } from "../services/api";
 
-export default function Login() {
+export default function DoctorLogin() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
@@ -18,24 +18,11 @@ export default function Login() {
     setLoading(true);
     setError("");
     try {
-      const res = await authAPI.login(form);
+      const res = await authAPI.loginDoctor(form);
       const { token, user } = res.data;
-
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
-
-      // Patient-only login page
-      if (user.role !== "patient") {
-        setError(
-          user.role === "doctor"
-            ? "Doctors must use the Doctor Login page."
-            : "Admins must use the Admin Login page.",
-        );
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        return;
-      }
-      navigate("/patient/dashboard");
+      navigate("/doctor-dashboard");
     } catch (err) {
       setError(
         err.response?.data?.message || "Login failed. Please try again.",
@@ -50,28 +37,28 @@ export default function Login() {
       {/* LEFT */}
       <div style={styles.left}>
         <div style={styles.brand}>
-          <div style={styles.brandIcon}>✚</div>
+          <div style={styles.brandIcon}>🩺</div>
           <span style={styles.brandName}>MediCore</span>
         </div>
         <div style={styles.heroText}>
           <h1 style={styles.heroHeading}>
-            Patient
+            Doctor
             <br />
-            Login
+            Portal
           </h1>
           <p style={styles.heroSub}>
-            Access your account and manage your health.
+            Manage your appointments, patients and schedule.
           </p>
         </div>
-        <div style={styles.stats}>
+        <div style={styles.features}>
           {[
-            ["120+", "Doctors"],
-            ["5,400+", "Patients"],
-            ["98%", "Uptime"],
-          ].map(([val, label]) => (
-            <div key={label} style={styles.statItem}>
-              <span style={styles.statVal}>{val}</span>
-              <span style={styles.statLabel}>{label}</span>
+            ["📅", "View today's schedule"],
+            ["👤", "Manage patient records"],
+            ["✅", "Update appointment status"],
+          ].map(([icon, text]) => (
+            <div key={text} style={styles.featureItem}>
+              <span style={styles.featureIcon}>{icon}</span>
+              <span style={styles.featureText}>{text}</span>
             </div>
           ))}
         </div>
@@ -80,9 +67,12 @@ export default function Login() {
       {/* RIGHT */}
       <div style={styles.right}>
         <div style={styles.card}>
-          <h2 style={styles.cardTitle}>Sign In</h2>
-          <p style={styles.cardSub}>Login to your account</p>
+          <div style={styles.cardBadge}>🩺 Doctor Access</div>
+          <h2 style={styles.cardTitle}>Doctor Sign In</h2>
+          <p style={styles.cardSub}>Enter your doctor credentials</p>
+
           {error && <div style={styles.errorBox}>{error}</div>}
+
           <form onSubmit={handleSubmit} style={styles.form}>
             <div style={styles.field}>
               <label style={styles.label}>Email</label>
@@ -92,7 +82,7 @@ export default function Login() {
                 name="email"
                 value={form.email}
                 onChange={handleChange}
-                placeholder="your@email.com"
+                placeholder="doctor@hospital.com"
                 required
               />
             </div>
@@ -113,27 +103,19 @@ export default function Login() {
               style={{ ...styles.btn, ...(loading ? styles.btnDisabled : {}) }}
               disabled={loading}
             >
-              {loading ? "Signing in…" : "Sign In →"}
+              {loading ? "Signing in…" : "Access Doctor Dashboard →"}
             </button>
           </form>
+
+          <div style={styles.divider} />
+
           <p style={styles.footer}>
-            Don&apos;t have an account?{" "}
-            <span style={styles.link} onClick={() => navigate("/register")}>
-              Register
-            </span>
-          </p>
-          <p style={{ ...styles.footer, marginTop: 8 }}>
-            <span
-              style={styles.link}
-              onClick={() => navigate("/doctor-login")}
-            >
-              Doctor Login
+            Not a doctor?{" "}
+            <span style={styles.link} onClick={() => navigate("/login")}>
+              Patient Login
             </span>
             {" · "}
-            <span
-              style={styles.link}
-              onClick={() => navigate("/admin-login")}
-            >
+            <span style={styles.link} onClick={() => navigate("/admin-login")}>
               Admin Login
             </span>
           </p>
@@ -152,7 +134,7 @@ const styles = {
   },
   left: {
     flex: 1,
-    background: "linear-gradient(135deg, #0f4c81 0%, #1a73e8 100%)",
+    background: "linear-gradient(135deg, #065f46 0%, #10b981 100%)",
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
@@ -161,7 +143,7 @@ const styles = {
   },
   brand: { display: "flex", alignItems: "center", gap: 12 },
   brandIcon: {
-    fontSize: 28,
+    fontSize: 24,
     background: "rgba(255,255,255,0.2)",
     width: 44,
     height: 44,
@@ -169,7 +151,6 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontWeight: "bold",
   },
   brandName: { fontSize: 22, fontWeight: 700 },
   heroText: {
@@ -178,12 +159,28 @@ const styles = {
     flexDirection: "column",
     justifyContent: "center",
   },
-  heroHeading: { fontSize: 48, fontWeight: 800, lineHeight: 1.1 },
-  heroSub: { fontSize: 16, opacity: 0.8, marginTop: 10 },
-  stats: { display: "flex", gap: 40 },
-  statItem: { display: "flex", flexDirection: "column" },
-  statVal: { fontSize: 26, fontWeight: 800 },
-  statLabel: { fontSize: 13, opacity: 0.7 },
+  heroHeading: {
+    fontSize: 52,
+    fontWeight: 800,
+    lineHeight: 1.1,
+    marginBottom: 16,
+  },
+  heroSub: { fontSize: 16, opacity: 0.85 },
+  features: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 12,
+  },
+  featureItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    background: "rgba(255,255,255,0.12)",
+    borderRadius: 10,
+    padding: "10px 14px",
+  },
+  featureIcon: { fontSize: 18 },
+  featureText: { fontSize: 14, fontWeight: 500 },
   right: {
     flex: 1,
     display: "flex",
@@ -194,36 +191,55 @@ const styles = {
   card: {
     background: "#fff",
     borderRadius: 20,
-    padding: "48px 44px",
+    padding: "44px 44px",
     width: "100%",
     maxWidth: 420,
     boxShadow: "0 8px 40px rgba(0,0,0,0.10)",
   },
-  cardTitle: { fontSize: 26, fontWeight: 800, color: "#0f172a" },
+  cardBadge: {
+    display: "inline-block",
+    background: "#d1fae5",
+    color: "#065f46",
+    fontSize: 12,
+    fontWeight: 700,
+    padding: "4px 12px",
+    borderRadius: 20,
+    marginBottom: 16,
+  },
+  cardTitle: { fontSize: 26, fontWeight: 800, color: "#0f172a", margin: "0 0 4px" },
   cardSub: { color: "#64748b", marginBottom: 24 },
   errorBox: {
     background: "#fef2f2",
     border: "1px solid #fecaca",
     color: "#dc2626",
     borderRadius: 10,
-    padding: "10px",
+    padding: "10px 12px",
     marginBottom: 16,
+    fontSize: 13,
   },
   form: { display: "flex", flexDirection: "column", gap: 18 },
   field: { display: "flex", flexDirection: "column", gap: 5 },
   label: { fontSize: 13, fontWeight: 600, color: "#374151" },
-  input: { padding: "12px", borderRadius: 10, border: "1px solid #e2e8f0" },
+  input: {
+    padding: "12px",
+    borderRadius: 10,
+    border: "1.5px solid #e2e8f0",
+    fontSize: 14,
+    outline: "none",
+  },
   btn: {
-    marginTop: 10,
+    marginTop: 6,
     padding: "14px",
     borderRadius: 12,
     border: "none",
-    background: "linear-gradient(135deg, #0f4c81, #1a73e8)",
+    background: "linear-gradient(135deg, #065f46, #10b981)",
     color: "#fff",
     fontWeight: 700,
+    fontSize: 15,
     cursor: "pointer",
   },
   btnDisabled: { opacity: 0.6 },
-  footer: { textAlign: "center", marginTop: 20 },
-  link: { color: "#1a73e8", cursor: "pointer", fontWeight: 600 },
+  divider: { height: 1, background: "#f1f5f9", margin: "20px 0" },
+  footer: { textAlign: "center", fontSize: 13, color: "#64748b", margin: 0 },
+  link: { color: "#10b981", cursor: "pointer", fontWeight: 600 },
 };

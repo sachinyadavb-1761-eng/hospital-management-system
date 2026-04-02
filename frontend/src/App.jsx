@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
+import DoctorLogin from "./pages/DoctorLogin";
+import AdminLogin from "./pages/AdminLogin";
 import Register from "./pages/Register";
 import StaffLogin from "./pages/StaffLogin";
 import Dashboard from "./pages/Dashboard";
@@ -18,9 +20,12 @@ export default function App() {
         ══════════════════════════════════════════ */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/doctor-login" element={<DoctorLogin />} />
+        <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/staff/login" element={<StaffLogin />} />
-        <Route path="/staff-login" element={<Navigate to="/staff/login" replace />} />
+        {/* Legacy staff login kept for backward compat, redirects to doctor-login */}
+        <Route path="/staff/login" element={<Navigate to="/doctor-login" replace />} />
+        <Route path="/staff-login" element={<Navigate to="/doctor-login" replace />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
 
         {/* ══════════════════════════════════════════
