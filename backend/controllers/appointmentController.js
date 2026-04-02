@@ -1,4 +1,6 @@
 import Appointment from "../models/Appointment.js";
+import Doctor from "../models/Doctor.js";
+import Patient from "../models/Patient.js";
 
 // ─── Create Appointment ───────────────────────────────────────────────────────
 export const createAppointment = async (req, res) => {
@@ -23,16 +25,21 @@ export const getAllAppointments = async (req, res) => {
     let filter = {};
 
     if (req.user.role === "doctor") {
-      // Doctor model se match karna hai — doctor field ObjectId hai
-      // Hum doctorId query param se bhi filter kar sakte hain
-      const { doctorId } = req.query;
-      if (doctorId) {
-        filter.doctor = doctorId;
+      // Doctor document email se match karo (User._id != Doctor._id)
+      const doctor = await Doctor.findOne({ email: req.user.email });
+      if (doctor) {
+        filter.doctor = doctor._id;
+      } else {
+        // No Doctor document found for this user — return empty
+        return res.status(200).json([]);
       }
     } else if (req.user.role === "patient") {
-      const { patientId } = req.query;
-      if (patientId) {
-        filter.patient = patientId;
+      // Patient document userId se match karo
+      const patient = await Patient.findOne({ userId: req.user._id });
+      if (patient) {
+        filter.patient = patient._id;
+      } else {
+        return res.status(200).json([]);
       }
     }
     // admin: no filter — sab milega

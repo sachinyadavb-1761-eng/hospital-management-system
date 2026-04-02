@@ -99,7 +99,13 @@ export default function Dashboard() {
   };
 
   const openEdit = (type, data) => {
-    setFormData({ ...data });
+    let editData = { ...data };
+    if (type === "appointment") {
+      // Appointment has populated patient/doctor objects; form needs patientId/doctorId
+      editData.patientId = data.patient?._id || data.patient || "";
+      editData.doctorId = data.doctor?._id || data.doctor || "";
+    }
+    setFormData(editData);
     setFormError("");
     setModal({ type, mode: "edit" });
   };

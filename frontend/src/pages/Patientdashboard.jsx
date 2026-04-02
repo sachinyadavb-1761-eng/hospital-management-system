@@ -41,19 +41,15 @@ export default function PatientDashboard() {
     try {
       const [docRes, patRes] = await Promise.all([
         doctorsAPI.getAll(),
-        patientsAPI.getAll(),
+        patientsAPI.getMe(),
       ]);
       setDoctors(docRes.data || []);
 
-      const patients = patRes.data || [];
-      // ✅ userId se match karo (most reliable)
-      const me = patients.find(
-        (p) => p.userId === user._id || p.email === user.email,
-      );
-      setMyPatient(me || null);
+      const me = patRes.data || null;
+      setMyPatient(me);
 
       if (me) {
-        const apptRes = await appointmentsAPI.getByPatient(me._id);
+        const apptRes = await appointmentsAPI.getAll();
         setMyAppointments(apptRes.data || []);
       }
     } catch (err) {

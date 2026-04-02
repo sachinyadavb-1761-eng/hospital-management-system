@@ -60,6 +60,7 @@ export const doctorsAPI = {
 // ══════════════════════════════════════════════════════════════
 export const patientsAPI = {
   getAll: () => api.get("/patients"),
+  getMe: () => api.get("/patients/me"),
   getById: (id) => api.get(`/patients/${id}`),
   create: (data) => api.post("/patients", data),
   update: (id, data) => api.put(`/patients/${id}`, data),

@@ -3,13 +3,17 @@ import {
   createPatient,
   getAllPatients,
   getPatientById,
+  getMyPatient,
   updatePatient,
   deletePatient,
 } from "../controllers/patientController.js";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
- 
+
 const router = express.Router();
- 
+
+// Patient apna record dekhe (before /:id to avoid conflict)
+router.get("/me", protect, getMyPatient);
+
 // Admin aur doctor dono patients dekh sakte hain
 router.get("/", protect, authorizeRoles("admin", "doctor"), getAllPatients);
 router.get("/:id", protect, authorizeRoles("admin", "doctor"), getPatientById);

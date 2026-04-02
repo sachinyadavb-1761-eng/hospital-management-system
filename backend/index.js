@@ -6,6 +6,7 @@ import authRoutes from "./routes/authRoutes.js";
 import doctorRoutes from "./routes/doctorRoutes.js";
 import appointmentRoutes from "./routes/appointmentRoutes.js";
 import patientRoutes from "./routes/patientRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 
 // 1. Configs
 dotenv.config();
@@ -41,6 +42,7 @@ connectDB();
 
 // 5. Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 app.use("/api/doctors", doctorRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/patients", patientRoutes);

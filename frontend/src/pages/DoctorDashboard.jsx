@@ -24,10 +24,7 @@ export default function DoctorDashboard() {
   const fetchAppointments = async () => {
     setLoading(true);
     try {
-      // ✅ Sirf is doctor ke appointments — doctorId bhejo
-      // Note: Doctor ka User._id aur Doctor._id alag ho sakta hai
-      // Hum saare laate hain aur doctor name se match karte hain jab tak
-      // doctor-user linking nahi hoti
+      // Server automatically filters by this doctor's email → Doctor._id
       const res = await appointmentsAPI.getAll();
       setAppointments(res.data || []);
     } catch (err) {

@@ -1,5 +1,18 @@
 import Patient from "../models/Patient.js";
 
+// @desc  Logged-in patient apna record fetch kare
+// @route GET /api/patients/me
+export const getMyPatient = async (req, res) => {
+  try {
+    const patient = await Patient.findOne({ userId: req.user._id });
+    if (!patient)
+      return res.status(404).json({ message: "Patient record not found" });
+    res.status(200).json(patient);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc  Naya patient register karo
 // @route POST /api/patients
 export const createPatient = async (req, res) => {
