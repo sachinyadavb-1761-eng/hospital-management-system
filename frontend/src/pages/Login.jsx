@@ -26,11 +26,10 @@ export default function Login() {
 
       // ✅ Role-based redirect
       if (user.role === "admin") {
-        navigate("/dashboard");
+        navigate("/admin");
       } else if (user.role === "doctor") {
-        navigate("/doctor/dashboard");
+        navigate("/doctor-dashboard");
       } else {
-        // ✅ Patient → Patient Dashboard
         navigate("/patient/dashboard");
       }
     } catch (err) {

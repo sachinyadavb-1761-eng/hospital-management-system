@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { isLoggedIn, getUser, logout, getDashboardPath } from "../utils/auth";
 
 const DOCTORS = [
   {
@@ -78,6 +79,8 @@ export default function Home() {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
+  const loggedIn = isLoggedIn();
+  const authUser = loggedIn ? getUser() : null;
   const [contactForm, setContactForm] = useState({
     name: "",
     email: "",
@@ -127,19 +130,41 @@ export default function Home() {
             ))}
           </div>
           <div style={s.navActions}>
-            {/* NEW: Staff Portal Link (Hidden/Subtle) */}
-            <button
-              style={s.staffLink}
-              onClick={() => navigate("/staff/login")}
-            >
-              Staff Portal
-            </button>
-            <button style={s.loginBtn} onClick={() => navigate("/login")}>
-              Login
-            </button>
-            <button style={s.registerBtn} onClick={() => navigate("/register")}>
-              Register Free
-            </button>
+            {loggedIn && authUser ? (
+              <>
+                <span style={s.navUserName}>
+                  👤 {authUser.name?.split(" ")[0] || authUser.email}
+                </span>
+                <span style={s.navRoleBadge}>{authUser.role}</span>
+                <button
+                  style={s.dashboardBtn}
+                  onClick={() => navigate(getDashboardPath(authUser.role))}
+                >
+                  My Dashboard →
+                </button>
+                <button style={s.navLogoutBtn} onClick={logout}>
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  style={s.staffLink}
+                  onClick={() => navigate("/staff/login")}
+                >
+                  Staff Portal
+                </button>
+                <button style={s.loginBtn} onClick={() => navigate("/login")}>
+                  Login
+                </button>
+                <button
+                  style={s.registerBtn}
+                  onClick={() => navigate("/register")}
+                >
+                  Register Free
+                </button>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -398,6 +423,41 @@ const s = {
     background: "#0ea5e9",
     color: "#fff",
     fontWeight: 700,
+    cursor: "pointer",
+  },
+  // Auth-aware navbar items
+  navUserName: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: "#0f172a",
+  },
+  navRoleBadge: {
+    fontSize: 11,
+    fontWeight: 700,
+    textTransform: "capitalize",
+    background: "#dbeafe",
+    color: "#1e40af",
+    padding: "3px 10px",
+    borderRadius: 20,
+  },
+  dashboardBtn: {
+    padding: "9px 18px",
+    borderRadius: 10,
+    border: "none",
+    background: "#0f172a",
+    color: "#fff",
+    fontWeight: 700,
+    fontSize: 13,
+    cursor: "pointer",
+  },
+  navLogoutBtn: {
+    padding: "9px 18px",
+    borderRadius: 10,
+    border: "1.5px solid #e2e8f0",
+    background: "transparent",
+    color: "#ef4444",
+    fontWeight: 600,
+    fontSize: 13,
     cursor: "pointer",
   },
   hero: {

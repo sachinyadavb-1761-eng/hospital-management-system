@@ -34,9 +34,9 @@ export default function StaffLogin() {
 
       // ✅ Redirect
       if (user.role === "admin") {
-        navigate("/dashboard");
+        navigate("/admin");
       } else {
-        navigate("/doctor/dashboard"); // ✅ fixed
+        navigate("/doctor-dashboard");
       }
     } catch (err) {
       setError(err.response?.data?.message || "Invalid Staff Credentials");

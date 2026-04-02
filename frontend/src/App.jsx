@@ -3,63 +3,146 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import StaffLogin from "./pages/StaffLogin";
-import Dashboard from "./pages/Dashboard"; // Admin
-import DoctorDashboard from "./pages/DoctorDashboard"; // Doctor
-import PatientDashboard from "./pages/Patientdashboard"; // ✅ Patient
-
-// ─── Private Route ────────────────────────────────────────────────────────────
-function PrivateRoute({ children, role }) {
-  const token = localStorage.getItem("token");
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-
-  if (!token) return <Navigate to="/login" />;
-  if (role && user.role !== role) return <Navigate to="/" />;
-
-  return children;
-}
+import Dashboard from "./pages/Dashboard";
+import DoctorDashboard from "./pages/DoctorDashboard";
+import PatientDashboard from "./pages/Patientdashboard";
+import Unauthorized from "./pages/Unauthorized";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ── Public Routes ── */}
+        {/* ══════════════════════════════════════════
+            PUBLIC — anyone can access
+        ══════════════════════════════════════════ */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/staff/login" element={<StaffLogin />} />
+        <Route path="/staff-login" element={<Navigate to="/staff/login" replace />} />
+        <Route path="/unauthorized" element={<Unauthorized />} />
 
-        {/* ── Admin Dashboard ── */}
-        <Route
-          path="/dashboard"
-          element={
-            <PrivateRoute role="admin">
-              <Dashboard />
-            </PrivateRoute>
-          }
-        />
-
-        {/* ── Doctor Dashboard ── */}
-        <Route
-          path="/doctor/dashboard"
-          element={
-            <PrivateRoute role="doctor">
-              <DoctorDashboard />
-            </PrivateRoute>
-          }
-        />
-
-        {/* ✅ Patient Dashboard — Book appointment + history ── */}
+        {/* ══════════════════════════════════════════
+            PATIENT only
+        ══════════════════════════════════════════ */}
         <Route
           path="/patient/dashboard"
           element={
-            <PrivateRoute role="patient">
+            <ProtectedRoute roles={["patient"]}>
               <PatientDashboard />
-            </PrivateRoute>
+            </ProtectedRoute>
+          }
+        />
+        {/* /doctors is the primary patient landing after login */}
+        <Route
+          path="/doctors"
+          element={
+            <ProtectedRoute roles={["patient"]}>
+              <PatientDashboard />
+            </ProtectedRoute>
+          }
+        />
+        {/* Sub-routes redirect to the main patient dashboard */}
+        <Route
+          path="/book-appointment"
+          element={<Navigate to="/patient/dashboard" replace />}
+        />
+        <Route
+          path="/my-appointments"
+          element={<Navigate to="/patient/dashboard" replace />}
+        />
+        <Route
+          path="/profile"
+          element={<Navigate to="/patient/dashboard" replace />}
+        />
+
+        {/* ══════════════════════════════════════════
+            DOCTOR only
+        ══════════════════════════════════════════ */}
+        <Route
+          path="/doctor-dashboard"
+          element={
+            <ProtectedRoute roles={["doctor"]}>
+              <DoctorDashboard />
+            </ProtectedRoute>
+          }
+        />
+        {/* Backward-compat redirect */}
+        <Route
+          path="/doctor/dashboard"
+          element={<Navigate to="/doctor-dashboard" replace />}
+        />
+        <Route
+          path="/doctor-appointments"
+          element={
+            <ProtectedRoute roles={["doctor"]}>
+              <DoctorDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/doctor-patients"
+          element={
+            <ProtectedRoute roles={["doctor"]}>
+              <DoctorDashboard />
+            </ProtectedRoute>
           }
         />
 
-        {/* ── Fallback ── */}
-        <Route path="*" element={<Navigate to="/" />} />
+        {/* ══════════════════════════════════════════
+            ADMIN only
+        ══════════════════════════════════════════ */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        {/* Backward-compat redirect */}
+        <Route
+          path="/dashboard"
+          element={<Navigate to="/admin" replace />}
+        />
+        <Route
+          path="/admin/doctors"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/patients"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/appointments"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/departments"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ══════════════════════════════════════════
+            Fallback
+        ══════════════════════════════════════════ */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
