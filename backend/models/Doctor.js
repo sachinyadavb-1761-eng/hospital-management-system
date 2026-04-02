@@ -6,9 +6,14 @@ const doctorSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    department: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Department",
+      default: null,
+    },
     specialization: {
       type: String,
-      required: true,
+      default: "",
     },
     experience: {
       type: Number,
@@ -23,7 +28,6 @@ const doctorSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-    // ✅ fee field add kiya — appointment booking ke liye zaroori
     fee: {
       type: Number,
       default: 500,

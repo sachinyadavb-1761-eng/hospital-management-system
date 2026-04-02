@@ -50,6 +50,7 @@ export const authAPI = {
 export const doctorsAPI = {
   getAll: () => api.get("/doctors"),
   getById: (id) => api.get(`/doctors/${id}`),
+  getMyProfile: () => api.get("/doctors/profile"),
   create: (data) => api.post("/doctors", data),
   update: (id, data) => api.put(`/doctors/${id}`, data),
   delete: (id) => api.delete(`/doctors/${id}`),
@@ -65,6 +66,18 @@ export const patientsAPI = {
   create: (data) => api.post("/patients", data),
   update: (id, data) => api.put(`/patients/${id}`, data),
   delete: (id) => api.delete(`/patients/${id}`),
+};
+
+// ══════════════════════════════════════════════════════════════
+// DEPARTMENTS
+// ══════════════════════════════════════════════════════════════
+export const departmentsAPI = {
+  getAll: () => api.get("/departments"),
+  getById: (id) => api.get(`/departments/${id}`),
+  getDoctors: (id) => api.get(`/departments/${id}/doctors`),
+  create: (data) => api.post("/departments", data),
+  update: (id, data) => api.put(`/departments/${id}`, data),
+  delete: (id) => api.delete(`/departments/${id}`),
 };
 
 // ══════════════════════════════════════════════════════════════

@@ -5,6 +5,7 @@ import {
   doctorsAPI,
   patientsAPI,
   appointmentsAPI,
+  departmentsAPI,
 } from "../services/api";
 
 const NAV = [
@@ -18,9 +19,11 @@ export default function PatientDashboard() {
 
   const [activeTab, setActiveTab] = useState("book");
   const [doctors, setDoctors] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [myAppointments, setMyAppointments] = useState([]);
   const [myPatient, setMyPatient] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedDept, setSelectedDept] = useState("all");
 
   const [bookForm, setBookForm] = useState({
     doctorId: "",
@@ -39,11 +42,13 @@ export default function PatientDashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [docRes, patRes] = await Promise.all([
+      const [docRes, patRes, deptRes] = await Promise.all([
         doctorsAPI.getAll(),
         patientsAPI.getMe(),
+        departmentsAPI.getAll(),
       ]);
       setDoctors(docRes.data || []);
+      setDepartments(deptRes.data || []);
 
       const me = patRes.data || null;
       setMyPatient(me);
@@ -64,17 +69,26 @@ export default function PatientDashboard() {
     navigate("/login");
   };
 
+  // Filter doctors by selected department
+  const filteredDoctors =
+    selectedDept === "all"
+      ? doctors
+      : doctors.filter(
+          (d) =>
+            (d.department?._id || d.department) === selectedDept,
+        );
+
   const selectedDoctor = doctors.find((d) => d._id === bookForm.doctorId);
 
   const handleBook = async (e) => {
     e.preventDefault();
     if (!bookForm.doctorId || !bookForm.date || !bookForm.time) {
-      setBookError("Doctor, date aur time select karna zaroori hai.");
+      setBookError("Please select a doctor, date and time.");
       return;
     }
     if (!myPatient) {
       setBookError(
-        "Aapka patient profile nahi mila. Please logout karke dobara register karein.",
+        "Patient profile not found. Please logout and register again.",
       );
       return;
     }
@@ -95,6 +109,10 @@ export default function PatientDashboard() {
       setReceipt({
         appointmentId: appt._id,
         doctorName: selectedDoctor?.name,
+        department:
+          selectedDoctor?.department?.name ||
+          selectedDoctor?.specialization ||
+          "—",
         specialization: selectedDoctor?.specialization,
         date: bookForm.date,
         time: bookForm.time,
@@ -158,21 +176,20 @@ export default function PatientDashboard() {
           <>
             {activeTab === "book" && (
               <div style={s.bookGrid}>
+                {/* Left: Form */}
                 <div style={s.bookCard}>
                   <h2 style={s.cardTitle}>New Appointment</h2>
 
                   {bookError && <div style={s.errorBox}>⚠ {bookError}</div>}
-
                   {!myPatient && (
                     <div style={s.warnBox}>
-                      ⚠ Patient profile nahi mila. Logout karke dobara register
-                      karein.
+                      ⚠ Patient profile not found. Please logout and register again.
                     </div>
                   )}
 
                   <form onSubmit={handleBook} style={s.form}>
                     <div style={s.fieldGroup}>
-                      <label style={s.label}>Doctor Select Karein *</label>
+                      <label style={s.label}>Select Doctor *</label>
                       <select
                         style={s.select}
                         value={bookForm.doctorId}
@@ -180,10 +197,12 @@ export default function PatientDashboard() {
                           setBookForm({ ...bookForm, doctorId: e.target.value })
                         }
                       >
-                        <option value="">— Doctor chunein —</option>
+                        <option value="">— Choose a Doctor —</option>
                         {doctors.map((d) => (
                           <option key={d._id} value={d._id}>
-                            {d.name} — {d.specialization} (₹{d.fee || 500})
+                            {d.name} —{" "}
+                            {d.department?.name || d.specialization || "General"}{" "}
+                            (₹{d.fee || 500})
                           </option>
                         ))}
                       </select>
@@ -191,16 +210,16 @@ export default function PatientDashboard() {
 
                     {selectedDoctor && (
                       <div style={s.doctorPreview}>
-                        <div style={s.doctorAvatar}>
-                          {selectedDoctor.name[0]}
-                        </div>
+                        <div style={s.doctorAvatar}>{selectedDoctor.name[0]}</div>
                         <div>
                           <div style={{ fontWeight: 700 }}>
                             {selectedDoctor.name}
                           </div>
                           <div style={{ fontSize: 13, color: "#64748b" }}>
-                            {selectedDoctor.specialization} •{" "}
-                            {selectedDoctor.experience} yrs
+                            {selectedDoctor.department?.icon}{" "}
+                            {selectedDoctor.department?.name ||
+                              selectedDoctor.specialization}{" "}
+                            · {selectedDoctor.experience} yrs
                           </div>
                           <div
                             style={{
@@ -245,7 +264,7 @@ export default function PatientDashboard() {
                       <label style={s.label}>Notes (Optional)</label>
                       <textarea
                         style={{ ...s.input, height: 80, resize: "vertical" }}
-                        placeholder="Symptoms ya koi baat batao..."
+                        placeholder="Describe your symptoms..."
                         value={bookForm.notes}
                         onChange={(e) =>
                           setBookForm({ ...bookForm, notes: e.target.value })
@@ -259,24 +278,60 @@ export default function PatientDashboard() {
                   </form>
                 </div>
 
+                {/* Right: Doctor list with department filter */}
                 <div>
                   <h3
                     style={{
                       fontSize: 16,
                       fontWeight: 700,
-                      marginBottom: 16,
+                      marginBottom: 12,
                       color: "#0f172a",
                     }}
                   >
                     Available Doctors
                   </h3>
-                  {doctors.length === 0 ? (
+
+                  {/* Department Filter Tabs */}
+                  <div style={s.deptTabs}>
+                    <button
+                      style={{
+                        ...s.deptTab,
+                        ...(selectedDept === "all" ? s.deptTabActive : {}),
+                      }}
+                      onClick={() => setSelectedDept("all")}
+                    >
+                      All ({doctors.length})
+                    </button>
+                    {departments.map((dept) => {
+                      const count = doctors.filter(
+                        (d) =>
+                          (d.department?._id || d.department) === dept._id,
+                      ).length;
+                      if (count === 0) return null;
+                      return (
+                        <button
+                          key={dept._id}
+                          style={{
+                            ...s.deptTab,
+                            ...(selectedDept === dept._id
+                              ? s.deptTabActive
+                              : {}),
+                          }}
+                          onClick={() => setSelectedDept(dept._id)}
+                        >
+                          {dept.icon} {dept.name} ({count})
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {filteredDoctors.length === 0 ? (
                     <div style={s.emptyDoctors}>
-                      Koi doctor available nahi hai abhi.
+                      No doctors available in this department.
                     </div>
                   ) : (
                     <div style={s.doctorList}>
-                      {doctors.map((d) => (
+                      {filteredDoctors.map((d) => (
                         <div
                           key={d._id}
                           style={{
@@ -294,12 +349,14 @@ export default function PatientDashboard() {
                           >
                             {d.name[0]}
                           </div>
-                          <div>
+                          <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: 600, fontSize: 14 }}>
                               {d.name}
                             </div>
                             <div style={{ fontSize: 12, color: "#64748b" }}>
-                              {d.specialization}
+                              {d.department
+                                ? `${d.department.icon} ${d.department.name}`
+                                : d.specialization || "General"}
                             </div>
                             <div
                               style={{
@@ -324,30 +381,25 @@ export default function PatientDashboard() {
                 <table style={s.table}>
                   <thead>
                     <tr>
-                      {[
-                        "Doctor",
-                        "Specialization",
-                        "Date",
-                        "Time",
-                        "Fee",
-                        "Status",
-                      ].map((c) => (
-                        <th key={c} style={s.th}>
-                          {c}
-                        </th>
-                      ))}
+                      {["Doctor", "Department", "Date", "Time", "Fee", "Status"].map(
+                        (c) => (
+                          <th key={c} style={s.th}>
+                            {c}
+                          </th>
+                        ),
+                      )}
                     </tr>
                   </thead>
                   <tbody>
                     {myAppointments.length === 0 ? (
                       <tr>
                         <td colSpan={6} style={s.emptyCell}>
-                          Abhi tak koi appointment nahi.{" "}
+                          No appointments yet.{" "}
                           <span
                             style={{ color: "#0ea5e9", cursor: "pointer" }}
                             onClick={() => setActiveTab("book")}
                           >
-                            Book karein →
+                            Book now →
                           </span>
                         </td>
                       </tr>
@@ -359,7 +411,9 @@ export default function PatientDashboard() {
                         >
                           <td style={s.td}>{a.doctor?.name || "—"}</td>
                           <td style={s.td}>
-                            {a.doctor?.specialization || "—"}
+                            {a.doctor?.department?.name ||
+                              a.doctor?.specialization ||
+                              "—"}
                           </td>
                           <td style={s.td}>
                             {a.date
@@ -382,29 +436,23 @@ export default function PatientDashboard() {
         )}
       </main>
 
+      {/* Receipt Modal */}
       {receipt && (
         <div style={s.overlay} onClick={() => setReceipt(null)}>
           <div style={s.receiptModal} onClick={(e) => e.stopPropagation()}>
             <div style={{ textAlign: "center", marginBottom: 24 }}>
               <div style={{ fontSize: 48 }}>🎉</div>
-              <h2
-                style={{ margin: "8px 0 4px", fontSize: 22, fontWeight: 800 }}
-              >
+              <h2 style={{ margin: "8px 0 4px", fontSize: 22, fontWeight: 800 }}>
                 Appointment Booked!
               </h2>
-              <p style={{ color: "#64748b", fontSize: 14 }}>
-                Confirmation Receipt
-              </p>
+              <p style={{ color: "#64748b", fontSize: 14 }}>Confirmation Receipt</p>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {[
-                [
-                  "Appointment ID",
-                  `#${receipt.appointmentId?.slice(-8).toUpperCase()}`,
-                ],
+                ["Appointment ID", `#${receipt.appointmentId?.slice(-8).toUpperCase()}`],
                 ["Patient", receipt.patientName],
                 ["Doctor", receipt.doctorName],
-                ["Specialization", receipt.specialization],
+                ["Department", receipt.department],
                 [
                   "Date",
                   new Date(receipt.date).toLocaleDateString("en-IN", {
@@ -439,9 +487,7 @@ export default function PatientDashboard() {
                 }}
               >
                 <span style={{ fontWeight: 700 }}>Consultation Fee</span>
-                <span
-                  style={{ color: "#10b981", fontWeight: 800, fontSize: 18 }}
-                >
+                <span style={{ color: "#10b981", fontWeight: 800, fontSize: 18 }}>
                   ₹{receipt.fee}
                 </span>
               </div>
@@ -460,10 +506,7 @@ export default function PatientDashboard() {
               📩 Please arrive 10 minutes early.
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-              <button
-                style={s.receiptCloseBtn}
-                onClick={() => setReceipt(null)}
-              >
+              <button style={s.receiptCloseBtn} onClick={() => setReceipt(null)}>
                 Close
               </button>
               <button
@@ -612,12 +655,7 @@ const s = {
     padding: 32,
     boxShadow: "0 1px 6px rgba(0,0,0,0.07)",
   },
-  cardTitle: {
-    margin: "0 0 24px",
-    fontSize: 20,
-    fontWeight: 800,
-    color: "#0f172a",
-  },
+  cardTitle: { margin: "0 0 24px", fontSize: 20, fontWeight: 800, color: "#0f172a" },
   form: { display: "flex", flexDirection: "column", gap: 18 },
   fieldGroup: { display: "flex", flexDirection: "column", gap: 6 },
   label: { fontSize: 13, fontWeight: 600, color: "#374151" },
@@ -669,6 +707,29 @@ const s = {
     fontSize: 15,
     cursor: "pointer",
   },
+  // Department filter tabs
+  deptTabs: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 14,
+  },
+  deptTab: {
+    padding: "6px 12px",
+    borderRadius: 20,
+    border: "1.5px solid #e2e8f0",
+    background: "#fff",
+    color: "#475569",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+  deptTabActive: {
+    background: "#0ea5e9",
+    color: "#fff",
+    border: "1.5px solid #0ea5e9",
+  },
   emptyDoctors: {
     padding: 20,
     textAlign: "center",
@@ -687,10 +748,7 @@ const s = {
     background: "#fff",
     cursor: "pointer",
   },
-  doctorListCardActive: {
-    border: "1.5px solid #0ea5e9",
-    background: "#f0f9ff",
-  },
+  doctorListCardActive: { border: "1.5px solid #0ea5e9", background: "#f0f9ff" },
   docAvatar: {
     width: 40,
     height: 40,
@@ -701,6 +759,7 @@ const s = {
     justifyContent: "center",
     fontWeight: 700,
     fontSize: 16,
+    flexShrink: 0,
   },
   tableWrap: {
     background: "#fff",
@@ -727,12 +786,7 @@ const s = {
   },
   rowEven: { background: "#fff" },
   rowOdd: { background: "#fafafa" },
-  emptyCell: {
-    padding: "48px",
-    textAlign: "center",
-    color: "#94a3b8",
-    fontSize: 14,
-  },
+  emptyCell: { padding: "48px", textAlign: "center", color: "#94a3b8", fontSize: 14 },
   errorBox: {
     background: "#fee2e2",
     color: "#991b1b",

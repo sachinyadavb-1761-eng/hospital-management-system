@@ -7,7 +7,11 @@ export const createAppointment = async (req, res) => {
   try {
     const appointment = await Appointment.create(req.body);
     const populated = await appointment.populate([
-      { path: "doctor", select: "name specialization fee" },
+      {
+        path: "doctor",
+        select: "name specialization fee department",
+        populate: { path: "department", select: "name icon" },
+      },
       { path: "patient", select: "name age" },
     ]);
     res
@@ -45,7 +49,7 @@ export const getAllAppointments = async (req, res) => {
     // admin: no filter — sab milega
 
     const appointments = await Appointment.find(filter)
-      .populate("doctor", "name specialization fee")
+      .populate({ path: "doctor", select: "name specialization fee department", populate: { path: "department", select: "name icon" } })
       .populate("patient", "name age phone")
       .sort({ date: -1 });
 
@@ -59,7 +63,7 @@ export const getAllAppointments = async (req, res) => {
 export const getAppointmentById = async (req, res) => {
   try {
     const appointment = await Appointment.findById(req.params.id)
-      .populate("doctor", "name specialization fee")
+      .populate({ path: "doctor", select: "name specialization fee department", populate: { path: "department", select: "name icon" } })
       .populate("patient", "name age phone");
     if (!appointment) {
       return res.status(404).json({ message: "Appointment not found" });
@@ -78,7 +82,7 @@ export const updateAppointment = async (req, res) => {
       req.body,
       { new: true },
     )
-      .populate("doctor", "name specialization")
+      .populate({ path: "doctor", select: "name specialization fee department", populate: { path: "department", select: "name icon" } })
       .populate("patient", "name age");
 
     if (!appointment) {

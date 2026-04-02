@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import Patient from "../models/Patient.js";
+import Doctor from "../models/Doctor.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
@@ -34,6 +35,19 @@ export const registerUser = async (req, res) => {
         bloodGroup: "",
         address: "",
         userId: user._id,
+      });
+    }
+
+    // ✅ Doctor register kare toh Doctor record bhi auto-create karo
+    if (userRole === "doctor") {
+      await Doctor.create({
+        name,
+        email,
+        phone: req.body.phone || "0000000000",
+        specialization: req.body.specialization || "",
+        experience: req.body.experience || 0,
+        department: req.body.department || null,
+        fee: req.body.fee || 500,
       });
     }
 

@@ -5,24 +5,27 @@ import {
   doctorsAPI,
   patientsAPI,
   appointmentsAPI,
+  departmentsAPI,
 } from "../services/api";
 
 const NAV = [
   { key: "overview", icon: "⊞", label: "Overview" },
+  { key: "departments", icon: "🏥", label: "Departments" },
   { key: "doctors", icon: "🩺", label: "Doctors" },
   { key: "patients", icon: "👤", label: "Patients" },
   { key: "appointments", icon: "📅", label: "Appointments" },
 ];
 
-// ─── Initial Form States ──────────────────────────────────────────────────────
 const DOCTOR_INIT = {
   name: "",
   email: "",
   phone: "",
+  department: "",
   specialization: "",
   experience: "",
   fee: "",
 };
+const DEPT_INIT = { name: "", description: "", icon: "🏥", isActive: true };
 const PATIENT_INIT = {
   name: "",
   email: "",
@@ -49,11 +52,11 @@ export default function Dashboard() {
   const [doctors, setDoctors] = useState([]);
   const [patients, setPatients] = useState([]);
   const [appointments, setAppointments] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Modal state
-  const [modal, setModal] = useState(null); // { type: 'doctor'|'patient'|'appointment', mode: 'add'|'edit', data: {} }
-  const [deleteConfirm, setDeleteConfirm] = useState(null); // { type, id, name }
+  const [modal, setModal] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [formData, setFormData] = useState({});
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
@@ -65,14 +68,16 @@ export default function Dashboard() {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [d, p, a] = await Promise.all([
+      const [d, p, a, dept] = await Promise.all([
         doctorsAPI.getAll(),
         patientsAPI.getAll(),
         appointmentsAPI.getAll(),
+        departmentsAPI.getAll(),
       ]);
       setDoctors(d.data || []);
       setPatients(p.data || []);
       setAppointments(a.data || []);
+      setDepartments(dept.data || []);
     } catch (err) {
       console.error("Fetch error:", err);
     } finally {
@@ -85,14 +90,15 @@ export default function Dashboard() {
     navigate("/login");
   };
 
-  // ── Open Modals ──
   const openAdd = (type) => {
     const init =
       type === "doctor"
         ? DOCTOR_INIT
         : type === "patient"
           ? PATIENT_INIT
-          : APPT_INIT;
+          : type === "department"
+            ? DEPT_INIT
+            : APPT_INIT;
     setFormData(init);
     setFormError("");
     setModal({ type, mode: "add" });
@@ -101,9 +107,11 @@ export default function Dashboard() {
   const openEdit = (type, data) => {
     let editData = { ...data };
     if (type === "appointment") {
-      // Appointment has populated patient/doctor objects; form needs patientId/doctorId
       editData.patientId = data.patient?._id || data.patient || "";
       editData.doctorId = data.doctor?._id || data.doctor || "";
+    }
+    if (type === "doctor") {
+      editData.department = data.department?._id || data.department || "";
     }
     setFormData(editData);
     setFormError("");
@@ -116,33 +124,41 @@ export default function Dashboard() {
     setFormError("");
   };
 
-  // ── Save (Add/Edit) ──
   const handleSave = async () => {
     setSaving(true);
     setFormError("");
     try {
       const { type, mode } = modal;
-      const api =
-        type === "doctor"
-          ? doctorsAPI
-          : type === "patient"
-            ? patientsAPI
-            : appointmentsAPI;
 
-      // Appointment ke liye patientId/doctorId → patient/doctor rename karo
-      let payload = { ...formData };
-      if (type === "appointment") {
-        payload.patient = formData.patientId;
-        payload.doctor = formData.doctorId;
-        delete payload.patientId;
-        delete payload.doctorId;
-      }
-
-      if (mode === "add") {
-        await api.create(payload);
+      if (type === "department") {
+        if (mode === "add") {
+          await departmentsAPI.create(formData);
+        } else {
+          await departmentsAPI.update(formData._id, formData);
+        }
       } else {
-        await api.update(payload._id, payload);
+        const api =
+          type === "doctor"
+            ? doctorsAPI
+            : type === "patient"
+              ? patientsAPI
+              : appointmentsAPI;
+
+        let payload = { ...formData };
+        if (type === "appointment") {
+          payload.patient = formData.patientId;
+          payload.doctor = formData.doctorId;
+          delete payload.patientId;
+          delete payload.doctorId;
+        }
+
+        if (mode === "add") {
+          await api.create(payload);
+        } else {
+          await api.update(payload._id, payload);
+        }
       }
+
       await fetchAll();
       closeModal();
     } catch (err) {
@@ -154,19 +170,22 @@ export default function Dashboard() {
     }
   };
 
-  // ── Delete ──
   const handleDelete = async () => {
     if (!deleteConfirm) return;
     setSaving(true);
     try {
       const { type, id } = deleteConfirm;
-      const api =
-        type === "doctor"
-          ? doctorsAPI
-          : type === "patient"
-            ? patientsAPI
-            : appointmentsAPI;
-      await api.delete(id);
+      if (type === "department") {
+        await departmentsAPI.delete(id);
+      } else {
+        const api =
+          type === "doctor"
+            ? doctorsAPI
+            : type === "patient"
+              ? patientsAPI
+              : appointmentsAPI;
+        await api.delete(id);
+      }
       await fetchAll();
       setDeleteConfirm(null);
     } catch (err) {
@@ -179,13 +198,18 @@ export default function Dashboard() {
   const handleFormChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  // ── Stats ──
   const stats = [
     {
       label: "Total Doctors",
       value: doctors.length,
       color: "#1a73e8",
       icon: "🩺",
+    },
+    {
+      label: "Departments",
+      value: departments.length,
+      color: "#8b5cf6",
+      icon: "🏥",
     },
     {
       label: "Total Patients",
@@ -199,16 +223,14 @@ export default function Dashboard() {
       color: "#f59e0b",
       icon: "📅",
     },
-    {
-      label: "Today",
-      value: appointments.filter((a) => {
-        const d = new Date(a.date || a.appointmentDate);
-        return d.toDateString() === new Date().toDateString();
-      }).length,
-      color: "#8b5cf6",
-      icon: "📆",
-    },
   ];
+
+  // Doctor count per department
+  const doctorCountByDept = (deptId) =>
+    doctors.filter(
+      (d) =>
+        (d.department?._id || d.department) === deptId,
+    ).length;
 
   return (
     <div style={s.shell}>
@@ -254,6 +276,12 @@ export default function Dashboard() {
             <p style={s.pageDate}>{new Date().toDateString()}</p>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
+            {activeTab === "departments" && (
+              <AddBtn
+                onClick={() => openAdd("department")}
+                label="Add Department"
+              />
+            )}
             {activeTab === "doctors" && (
               <AddBtn onClick={() => openAdd("doctor")} label="Add Doctor" />
             )}
@@ -293,51 +321,160 @@ export default function Dashboard() {
                 </div>
                 <h2 style={s.sectionTitle}>Recent Appointments</h2>
                 <Table
-                  columns={["Patient", "Doctor", "Date", "Status"]}
-                  rows={appointments
-                    .slice(0, 6)
-                    .map((a) => [
-                      a.patientName || a.patient?.name || a.patientId,
-                      a.doctorName || a.doctor?.name || a.doctorId,
-                      a.date
-                        ? new Date(a.date).toLocaleDateString()
-                        : a.appointmentDate || "—",
-                      <StatusBadge key={a._id} status={a.status} />,
-                    ])}
+                  columns={["Patient", "Doctor", "Department", "Date", "Status"]}
+                  rows={appointments.slice(0, 6).map((a) => [
+                    a.patient?.name || "—",
+                    a.doctor?.name || "—",
+                    a.doctor?.department?.name || "—",
+                    a.date ? new Date(a.date).toLocaleDateString() : "—",
+                    <StatusBadge key={a._id} status={a.status} />,
+                  ])}
                   empty="No appointments found"
                 />
               </div>
             )}
 
-            {/* DOCTORS */}
+            {/* DEPARTMENTS */}
+            {activeTab === "departments" && (
+              <div style={s.deptGrid}>
+                {departments.length === 0 ? (
+                  <div style={s.emptyState}>
+                    No departments found. Click &quot;Add Department&quot; to create one.
+                  </div>
+                ) : (
+                  departments.map((dept) => {
+                    const count = doctorCountByDept(dept._id);
+                    return (
+                      <div key={dept._id} style={s.deptCard}>
+                        <div style={s.deptIconWrap}>{dept.icon || "🏥"}</div>
+                        <div style={s.deptInfo}>
+                          <div style={s.deptName}>{dept.name}</div>
+                          <div style={s.deptDesc}>
+                            {dept.description || "No description"}
+                          </div>
+                          <div style={s.deptCount}>
+                            <span style={s.deptCountBadge}>
+                              🩺 {count} Doctor{count !== 1 ? "s" : ""}
+                            </span>
+                          </div>
+                        </div>
+                        <div style={s.deptActions}>
+                          <button
+                            style={s.editBtn}
+                            onClick={() => openEdit("department", dept)}
+                          >
+                            ✏ Edit
+                          </button>
+                          <button
+                            style={s.deleteBtn}
+                            onClick={() =>
+                              setDeleteConfirm({
+                                type: "department",
+                                id: dept._id,
+                                name: dept.name,
+                              })
+                            }
+                          >
+                            🗑 Delete
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+
+            {/* DOCTORS — grouped by department */}
             {activeTab === "doctors" && (
-              <Table
-                columns={[
-                  "Name",
-                  "Specialization",
-                  "Email",
-                  "Phone",
-                  "Actions",
-                ]}
-                rows={doctors.map((d) => [
-                  d.name,
-                  d.specialization || d.specialty || "—",
-                  d.email || "—",
-                  d.phone || "—",
-                  <ActionBtns
-                    key={d._id}
-                    onEdit={() => openEdit("doctor", d)}
-                    onDelete={() =>
-                      setDeleteConfirm({
-                        type: "doctor",
-                        id: d._id,
-                        name: d.name,
-                      })
-                    }
-                  />,
-                ])}
-                empty="No doctors found. Click 'Add Doctor' to get started."
-              />
+              <div>
+                {departments.length > 0 ? (
+                  departments.map((dept) => {
+                    const deptDoctors = doctors.filter(
+                      (d) =>
+                        (d.department?._id || d.department) === dept._id,
+                    );
+                    if (deptDoctors.length === 0) return null;
+                    return (
+                      <div key={dept._id} style={{ marginBottom: 32 }}>
+                        <div style={s.deptGroupHeader}>
+                          <span>{dept.icon}</span>
+                          <span>{dept.name}</span>
+                          <span style={s.deptGroupCount}>
+                            {deptDoctors.length} doctor
+                            {deptDoctors.length !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+                        <Table
+                          columns={["Name", "Specialization", "Email", "Phone", "Fee", "Actions"]}
+                          rows={deptDoctors.map((d) => [
+                            d.name,
+                            d.specialization || "—",
+                            d.email || "—",
+                            d.phone || "—",
+                            d.fee ? `₹${d.fee}` : "—",
+                            <ActionBtns
+                              key={d._id}
+                              onEdit={() => openEdit("doctor", d)}
+                              onDelete={() =>
+                                setDeleteConfirm({
+                                  type: "doctor",
+                                  id: d._id,
+                                  name: d.name,
+                                })
+                              }
+                            />,
+                          ])}
+                          empty=""
+                        />
+                      </div>
+                    );
+                  })
+                ) : null}
+                {/* Doctors with no department */}
+                {(() => {
+                  const unassigned = doctors.filter((d) => !d.department);
+                  if (unassigned.length === 0) return null;
+                  return (
+                    <div style={{ marginBottom: 32 }}>
+                      <div style={s.deptGroupHeader}>
+                        <span>📋</span>
+                        <span>Unassigned</span>
+                        <span style={s.deptGroupCount}>
+                          {unassigned.length} doctor{unassigned.length !== 1 ? "s" : ""}
+                        </span>
+                      </div>
+                      <Table
+                        columns={["Name", "Specialization", "Email", "Phone", "Fee", "Actions"]}
+                        rows={unassigned.map((d) => [
+                          d.name,
+                          d.specialization || "—",
+                          d.email || "—",
+                          d.phone || "—",
+                          d.fee ? `₹${d.fee}` : "—",
+                          <ActionBtns
+                            key={d._id}
+                            onEdit={() => openEdit("doctor", d)}
+                            onDelete={() =>
+                              setDeleteConfirm({
+                                type: "doctor",
+                                id: d._id,
+                                name: d.name,
+                              })
+                            }
+                          />,
+                        ])}
+                        empty=""
+                      />
+                    </div>
+                  );
+                })()}
+                {doctors.length === 0 && (
+                  <div style={s.loader}>
+                    No doctors found. Click &quot;Add Doctor&quot; to get started.
+                  </div>
+                )}
+              </div>
             )}
 
             {/* PATIENTS */}
@@ -369,17 +506,11 @@ export default function Dashboard() {
             {/* APPOINTMENTS */}
             {activeTab === "appointments" && (
               <Table
-                columns={[
-                  "Patient",
-                  "Doctor",
-                  "Date",
-                  "Time",
-                  "Status",
-                  "Actions",
-                ]}
+                columns={["Patient", "Doctor", "Department", "Date", "Time", "Status", "Actions"]}
                 rows={appointments.map((a) => [
-                  a.patientName || a.patient?.name || a.patientId,
-                  a.doctorName || a.doctor?.name || a.doctorId,
+                  a.patient?.name || "—",
+                  a.doctor?.name || "—",
+                  a.doctor?.department?.name || "—",
                   a.date ? new Date(a.date).toLocaleDateString() : "—",
                   a.time || "—",
                   <StatusBadge key={a._id} status={a.status} />,
@@ -395,7 +526,7 @@ export default function Dashboard() {
                     }
                   />,
                 ])}
-                empty="No appointments found. Click 'Add Appointment' to get started."
+                empty="No appointments found."
               />
             )}
           </>
@@ -419,6 +550,55 @@ export default function Dashboard() {
             {formError && <div style={s.errorBox}>⚠ {formError}</div>}
 
             <div style={s.modalBody}>
+              {/* Department Form */}
+              {modal.type === "department" && (
+                <>
+                  <FormRow>
+                    <div style={s.fieldGroup}>
+                      <label style={s.label}>Icon (emoji)</label>
+                      <input
+                        name="icon"
+                        value={formData.icon || ""}
+                        onChange={handleFormChange}
+                        placeholder="🏥"
+                        style={s.input}
+                      />
+                    </div>
+                    <FormField
+                      label="Department Name *"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleFormChange}
+                      placeholder="e.g. Cardiology"
+                    />
+                  </FormRow>
+                  <FormField
+                    label="Description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleFormChange}
+                    placeholder="Short description of this department"
+                  />
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>Status</label>
+                    <select
+                      name="isActive"
+                      value={formData.isActive ? "true" : "false"}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          isActive: e.target.value === "true",
+                        })
+                      }
+                      style={s.select}
+                    >
+                      <option value="true">Active</option>
+                      <option value="false">Inactive</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
               {/* Doctor Form */}
               {modal.type === "doctor" && (
                 <>
@@ -447,15 +627,31 @@ export default function Dashboard() {
                       onChange={handleFormChange}
                       placeholder="+91 98765 43210"
                     />
+                    <div style={s.fieldGroup}>
+                      <label style={s.label}>Department *</label>
+                      <select
+                        name="department"
+                        value={formData.department || ""}
+                        onChange={handleFormChange}
+                        style={s.select}
+                      >
+                        <option value="">— Select Department —</option>
+                        {departments.map((d) => (
+                          <option key={d._id} value={d._id}>
+                            {d.icon} {d.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </FormRow>
+                  <FormRow>
                     <FormField
-                      label="Specialization *"
+                      label="Specialization"
                       name="specialization"
                       value={formData.specialization}
                       onChange={handleFormChange}
-                      placeholder="Cardiology"
+                      placeholder="e.g. Cardiologist"
                     />
-                  </FormRow>
-                  <FormRow>
                     <FormField
                       label="Experience (years)"
                       name="experience"
@@ -464,6 +660,8 @@ export default function Dashboard() {
                       onChange={handleFormChange}
                       placeholder="5"
                     />
+                  </FormRow>
+                  <FormRow>
                     <FormField
                       label="Consultation Fee"
                       name="fee"
@@ -576,7 +774,8 @@ export default function Dashboard() {
                         <option value="">Select Doctor</option>
                         {doctors.map((d) => (
                           <option key={d._id} value={d._id}>
-                            {d.name} — {d.specialization || d.specialty}
+                            {d.name} —{" "}
+                            {d.department?.name || d.specialization || "General"}
                           </option>
                         ))}
                       </select>
@@ -726,14 +925,7 @@ function FormRow({ children }) {
   );
 }
 
-function FormField({
-  label,
-  name,
-  type = "text",
-  value,
-  onChange,
-  placeholder,
-}) {
+function FormField({ label, name, type = "text", value, onChange, placeholder }) {
   return (
     <div style={s.fieldGroup}>
       <label style={s.label}>{label}</label>
@@ -795,10 +987,7 @@ function StatusBadge({ status }) {
     cancelled: { bg: "#fee2e2", color: "#991b1b" },
     completed: { bg: "#dbeafe", color: "#1e40af" },
   };
-  const style = map[status?.toLowerCase()] || {
-    bg: "#f1f5f9",
-    color: "#475569",
-  };
+  const style = map[status?.toLowerCase()] || { bg: "#f1f5f9", color: "#475569" };
   return (
     <span
       style={{
@@ -854,12 +1043,7 @@ const s = {
     fontWeight: "bold",
     color: "#fff",
   },
-  logoText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: 700,
-    letterSpacing: "-0.3px",
-  },
+  logoText: { color: "#fff", fontSize: 18, fontWeight: 700, letterSpacing: "-0.3px" },
   nav: { display: "flex", flexDirection: "column", gap: 4, flex: 1 },
   navBtn: {
     display: "flex",
@@ -917,13 +1101,7 @@ const s = {
     alignItems: "flex-start",
     marginBottom: 32,
   },
-  pageTitle: {
-    margin: 0,
-    fontSize: 26,
-    fontWeight: 800,
-    color: "#0f172a",
-    letterSpacing: "-0.5px",
-  },
+  pageTitle: { margin: 0, fontSize: 26, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.5px" },
   pageDate: { color: "#94a3b8", fontSize: 13, margin: "4px 0 0" },
   refreshBtn: {
     padding: "9px 18px",
@@ -946,6 +1124,7 @@ const s = {
     cursor: "pointer",
   },
   loader: { textAlign: "center", padding: 80, color: "#94a3b8", fontSize: 16 },
+  emptyState: { textAlign: "center", padding: 60, color: "#94a3b8", fontSize: 15 },
   statGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(4, 1fr)",
@@ -961,11 +1140,65 @@ const s = {
   statIcon: { fontSize: 26, marginBottom: 10 },
   statVal: { fontSize: 36, fontWeight: 800, lineHeight: 1 },
   statLabel: { color: "#64748b", fontSize: 13, marginTop: 4 },
-  sectionTitle: {
-    fontSize: 17,
+  sectionTitle: { fontSize: 17, fontWeight: 700, color: "#0f172a", marginBottom: 16 },
+  // Department cards
+  deptGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+    gap: 16,
+  },
+  deptCard: {
+    background: "#fff",
+    borderRadius: 16,
+    padding: "20px 20px",
+    boxShadow: "0 1px 6px rgba(0,0,0,0.07)",
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 16,
+    border: "1.5px solid #f1f5f9",
+  },
+  deptIconWrap: {
+    fontSize: 32,
+    minWidth: 52,
+    height: 52,
+    borderRadius: 14,
+    background: "#f0f4ff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deptInfo: { flex: 1 },
+  deptName: { fontSize: 16, fontWeight: 700, color: "#0f172a", marginBottom: 4 },
+  deptDesc: { fontSize: 13, color: "#64748b", marginBottom: 8 },
+  deptCount: {},
+  deptCountBadge: {
+    display: "inline-block",
+    background: "#dbeafe",
+    color: "#1e40af",
+    fontSize: 12,
+    fontWeight: 600,
+    padding: "3px 10px",
+    borderRadius: 20,
+  },
+  deptActions: { display: "flex", flexDirection: "column", gap: 6 },
+  deptGroupHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    fontSize: 16,
     fontWeight: 700,
     color: "#0f172a",
-    marginBottom: 16,
+    marginBottom: 12,
+    padding: "10px 0",
+    borderBottom: "2px solid #e2e8f0",
+  },
+  deptGroupCount: {
+    fontSize: 12,
+    fontWeight: 600,
+    background: "#f1f5f9",
+    color: "#64748b",
+    padding: "2px 10px",
+    borderRadius: 20,
   },
   tableWrap: {
     background: "#fff",
@@ -993,12 +1226,7 @@ const s = {
   },
   rowEven: { background: "#fff" },
   rowOdd: { background: "#fafafa" },
-  emptyCell: {
-    padding: "48px",
-    textAlign: "center",
-    color: "#94a3b8",
-    fontSize: 14,
-  },
+  emptyCell: { padding: "48px", textAlign: "center", color: "#94a3b8", fontSize: 14 },
   editBtn: {
     padding: "5px 12px",
     borderRadius: 6,
@@ -1019,7 +1247,6 @@ const s = {
     fontWeight: 600,
     cursor: "pointer",
   },
-  // Modal
   overlay: {
     position: "fixed",
     inset: 0,
