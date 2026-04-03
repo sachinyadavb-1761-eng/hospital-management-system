@@ -24,7 +24,6 @@ export default function Login() {
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
 
-      // Patient-only login page
       if (user.role !== "patient") {
         setError(
           user.role === "doctor"
@@ -120,21 +119,6 @@ export default function Login() {
             Don&apos;t have an account?{" "}
             <span style={styles.link} onClick={() => navigate("/register")}>
               Register
-            </span>
-          </p>
-          <p style={{ ...styles.footer, marginTop: 8 }}>
-            <span
-              style={styles.link}
-              onClick={() => navigate("/doctor-login")}
-            >
-              Doctor Login
-            </span>
-            {" · "}
-            <span
-              style={styles.link}
-              onClick={() => navigate("/admin-login")}
-            >
-              Admin Login
             </span>
           </p>
         </div>

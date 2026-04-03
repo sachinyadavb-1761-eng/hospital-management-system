@@ -333,22 +333,6 @@ export default function Home() {
         <div style={s.footerInner}>
           <span style={{ color: "#fff", fontWeight: 800 }}>MediCore</span>
           <p style={s.footerCopy}>© 2026 MediCore. All rights reserved.</p>
-          <div style={s.footerStaffLinks}>
-            <span style={s.footerStaffLabel}>Staff Access:</span>
-            <button
-              style={s.footerStaffBtn}
-              onClick={() => navigate("/doctor-login")}
-            >
-              🩺 Doctor Login
-            </button>
-            <span style={{ color: "#334155" }}>·</span>
-            <button
-              style={s.footerStaffBtn}
-              onClick={() => navigate("/admin-login")}
-            >
-              🔐 Admin Login
-            </button>
-          </div>
         </div>
       </footer>
     </div>

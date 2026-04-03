@@ -114,10 +114,6 @@ export default function DoctorLogin() {
             <span style={styles.link} onClick={() => navigate("/login")}>
               Patient Login
             </span>
-            {" · "}
-            <span style={styles.link} onClick={() => navigate("/admin-login")}>
-              Admin Login
-            </span>
           </p>
         </div>
       </div>
@@ -206,7 +202,12 @@ const styles = {
     borderRadius: 20,
     marginBottom: 16,
   },
-  cardTitle: { fontSize: 26, fontWeight: 800, color: "#0f172a", margin: "0 0 4px" },
+  cardTitle: {
+    fontSize: 26,
+    fontWeight: 800,
+    color: "#0f172a",
+    margin: "0 0 4px",
+  },
   cardSub: { color: "#64748b", marginBottom: 24 },
   errorBox: {
     background: "#fef2f2",
