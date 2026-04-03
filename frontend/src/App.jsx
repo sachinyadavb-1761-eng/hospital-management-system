@@ -22,10 +22,28 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/doctor-login" element={<DoctorLogin />} />
         <Route path="/admin-login" element={<AdminLogin />} />
-        <Route path="/register" element={<Register />} />
+
+        {/* ══════════════════════════════════════════
+            REGISTER — sirf admin ya doctor access kar sakta hai
+        ══════════════════════════════════════════ */}
+        <Route
+          path="/register"
+          element={
+            <ProtectedRoute roles={["admin", "doctor"]}>
+              <Register />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Legacy staff login kept for backward compat, redirects to doctor-login */}
-        <Route path="/staff/login" element={<Navigate to="/doctor-login" replace />} />
-        <Route path="/staff-login" element={<Navigate to="/doctor-login" replace />} />
+        <Route
+          path="/staff/login"
+          element={<Navigate to="/doctor-login" replace />}
+        />
+        <Route
+          path="/staff-login"
+          element={<Navigate to="/doctor-login" replace />}
+        />
         <Route path="/unauthorized" element={<Unauthorized />} />
 
         {/* ══════════════════════════════════════════
@@ -39,7 +57,6 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        {/* /doctors is the primary patient landing after login */}
         <Route
           path="/doctors"
           element={
@@ -48,7 +65,6 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        {/* Sub-routes redirect to the main patient dashboard */}
         <Route
           path="/book-appointment"
           element={<Navigate to="/patient/dashboard" replace />}
@@ -73,7 +89,6 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        {/* Backward-compat redirect */}
         <Route
           path="/doctor/dashboard"
           element={<Navigate to="/doctor-dashboard" replace />}
@@ -106,11 +121,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        {/* Backward-compat redirect */}
-        <Route
-          path="/dashboard"
-          element={<Navigate to="/admin" replace />}
-        />
+        <Route path="/dashboard" element={<Navigate to="/admin" replace />} />
         <Route
           path="/admin/doctors"
           element={
