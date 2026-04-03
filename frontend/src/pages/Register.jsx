@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { authAPI, departmentsAPI } from "../services/api";
+import { authAPI } from "../services/api";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -9,21 +9,11 @@ export default function Register() {
     name: "",
     email: "",
     password: "",
-    role: "patient",
-    phone: "",
-    specialization: "",
-    experience: "",
-    department: "",
-    fee: "",
+    role: "patient", // Always patient
   });
 
-  const [departments, setDepartments] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    departmentsAPI.getAll().then((res) => setDepartments(res.data || [])).catch(() => {});
-  }, []);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -38,13 +28,13 @@ export default function Register() {
       await authAPI.register(form);
       navigate("/login");
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed. Try again.");
+      setError(
+        err.response?.data?.message || "Registration failed. Try again.",
+      );
     } finally {
       setLoading(false);
     }
   };
-
-  const isDoctor = form.role === "doctor";
 
   return (
     <div style={styles.page}>
@@ -59,9 +49,7 @@ export default function Register() {
             Join <br /> MediCore <br /> Today
           </h1>
           <p style={styles.heroSub}>
-            {isDoctor
-              ? "Register as a doctor and start managing patients."
-              : "Create your patient account and get started."}
+            Create your patient account and get started.
           </p>
         </div>
         <div style={styles.stats}>
@@ -81,34 +69,12 @@ export default function Register() {
       {/* RIGHT SIDE */}
       <div style={styles.right}>
         <div style={styles.card}>
-          <h2 style={styles.cardTitle}>
-            {isDoctor ? "Doctor Registration" : "Create Patient Account"}
-          </h2>
+          <h2 style={styles.cardTitle}>Create Patient Account</h2>
           <p style={styles.cardSub}>Fill in details to register</p>
 
           {error && <div style={styles.errorBox}>{error}</div>}
 
           <form onSubmit={handleSubmit} style={styles.form}>
-            {/* Role */}
-            <div style={styles.field}>
-              <label style={styles.label}>Register as</label>
-              <div style={styles.roleToggle}>
-                {["patient", "doctor"].map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    style={{
-                      ...styles.roleBtn,
-                      ...(form.role === r ? styles.roleBtnActive : {}),
-                    }}
-                    onClick={() => setForm({ ...form, role: r })}
-                  >
-                    {r === "patient" ? "👤 Patient" : "🩺 Doctor"}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Name */}
             <div style={styles.field}>
               <label style={styles.label}>Full Name</label>
@@ -150,83 +116,6 @@ export default function Register() {
                 required
               />
             </div>
-
-            {/* Doctor-only fields */}
-            {isDoctor && (
-              <>
-                <div style={styles.row}>
-                  <div style={styles.field}>
-                    <label style={styles.label}>Phone</label>
-                    <input
-                      style={styles.input}
-                      type="tel"
-                      name="phone"
-                      value={form.phone}
-                      onChange={handleChange}
-                      placeholder="+91 98765 43210"
-                      required
-                    />
-                  </div>
-                  <div style={styles.field}>
-                    <label style={styles.label}>Experience (years)</label>
-                    <input
-                      style={styles.input}
-                      type="number"
-                      name="experience"
-                      value={form.experience}
-                      onChange={handleChange}
-                      placeholder="5"
-                      min="0"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div style={styles.field}>
-                  <label style={styles.label}>Department *</label>
-                  <select
-                    style={styles.select}
-                    name="department"
-                    value={form.department}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="">— Select Department —</option>
-                    {departments.map((d) => (
-                      <option key={d._id} value={d._id}>
-                        {d.icon} {d.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div style={styles.row}>
-                  <div style={styles.field}>
-                    <label style={styles.label}>Specialization</label>
-                    <input
-                      style={styles.input}
-                      type="text"
-                      name="specialization"
-                      value={form.specialization}
-                      onChange={handleChange}
-                      placeholder="e.g. Cardiologist"
-                    />
-                  </div>
-                  <div style={styles.field}>
-                    <label style={styles.label}>Consultation Fee (₹)</label>
-                    <input
-                      style={styles.input}
-                      type="number"
-                      name="fee"
-                      value={form.fee}
-                      onChange={handleChange}
-                      placeholder="500"
-                      min="0"
-                    />
-                  </div>
-                </div>
-              </>
-            )}
 
             <button
               type="submit"
@@ -324,7 +213,6 @@ const styles = {
   },
   form: { display: "flex", flexDirection: "column", gap: 14 },
   field: { display: "flex", flexDirection: "column", gap: 5 },
-  row: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 },
   label: { fontSize: 13, fontWeight: 600, color: "#374151" },
   input: {
     padding: "11px 12px",
@@ -333,37 +221,6 @@ const styles = {
     fontSize: 14,
     outline: "none",
     background: "#f8fafc",
-  },
-  select: {
-    padding: "11px 12px",
-    borderRadius: 10,
-    border: "1.5px solid #e2e8f0",
-    fontSize: 14,
-    outline: "none",
-    background: "#f8fafc",
-  },
-  roleToggle: {
-    display: "flex",
-    gap: 8,
-    background: "#f1f5f9",
-    borderRadius: 10,
-    padding: 4,
-  },
-  roleBtn: {
-    flex: 1,
-    padding: "9px",
-    borderRadius: 8,
-    border: "none",
-    background: "transparent",
-    color: "#64748b",
-    fontWeight: 600,
-    fontSize: 14,
-    cursor: "pointer",
-  },
-  roleBtnActive: {
-    background: "#fff",
-    color: "#0f172a",
-    boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
   },
   btn: {
     marginTop: 6,
