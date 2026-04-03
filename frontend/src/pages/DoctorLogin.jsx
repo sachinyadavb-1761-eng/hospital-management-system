@@ -1,12 +1,32 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { authAPI } from "../services/api";
+import { authAPI, departmentsAPI } from "../services/api";
+import { useEffect } from "react";
 
 export default function DoctorLogin() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [mode, setMode] = useState("login"); // "login" or "register"
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "doctor",
+    phone: "",
+    specialization: "",
+    experience: "",
+    department: "",
+    fee: "",
+  });
+  const [departments, setDepartments] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    departmentsAPI
+      .getAll()
+      .then((res) => setDepartments(res.data || []))
+      .catch(() => {});
+  }, []);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -18,14 +38,24 @@ export default function DoctorLogin() {
     setLoading(true);
     setError("");
     try {
-      const res = await authAPI.loginDoctor(form);
-      const { token, user } = res.data;
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-      navigate("/doctor-dashboard");
+      if (mode === "login") {
+        const res = await authAPI.loginDoctor({
+          email: form.email,
+          password: form.password,
+        });
+        const { token, user } = res.data;
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user));
+        navigate("/doctor-dashboard");
+      } else {
+        await authAPI.register(form);
+        setMode("login");
+        setError("");
+        alert("Registration successful! Please login.");
+      }
     } catch (err) {
       setError(
-        err.response?.data?.message || "Login failed. Please try again.",
+        err.response?.data?.message || "Something went wrong. Try again.",
       );
     } finally {
       setLoading(false);
@@ -68,12 +98,64 @@ export default function DoctorLogin() {
       <div style={styles.right}>
         <div style={styles.card}>
           <div style={styles.cardBadge}>🩺 Doctor Access</div>
-          <h2 style={styles.cardTitle}>Doctor Sign In</h2>
-          <p style={styles.cardSub}>Enter your doctor credentials</p>
+
+          {/* Toggle Login/Register */}
+          <div style={styles.toggleRow}>
+            <button
+              style={{
+                ...styles.toggleBtn,
+                ...(mode === "login" ? styles.toggleActive : {}),
+              }}
+              onClick={() => {
+                setMode("login");
+                setError("");
+              }}
+            >
+              Sign In
+            </button>
+            <button
+              style={{
+                ...styles.toggleBtn,
+                ...(mode === "register" ? styles.toggleActive : {}),
+              }}
+              onClick={() => {
+                setMode("register");
+                setError("");
+              }}
+            >
+              Register
+            </button>
+          </div>
+
+          <h2 style={styles.cardTitle}>
+            {mode === "login" ? "Doctor Sign In" : "Doctor Registration"}
+          </h2>
+          <p style={styles.cardSub}>
+            {mode === "login"
+              ? "Enter your doctor credentials"
+              : "Fill in details to register"}
+          </p>
 
           {error && <div style={styles.errorBox}>{error}</div>}
 
           <form onSubmit={handleSubmit} style={styles.form}>
+            {/* Register only - Name */}
+            {mode === "register" && (
+              <div style={styles.field}>
+                <label style={styles.label}>Full Name</label>
+                <input
+                  style={styles.input}
+                  type="text"
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  placeholder="Dr. John Smith"
+                  required
+                />
+              </div>
+            )}
+
+            {/* Email */}
             <div style={styles.field}>
               <label style={styles.label}>Email</label>
               <input
@@ -86,6 +168,8 @@ export default function DoctorLogin() {
                 required
               />
             </div>
+
+            {/* Password */}
             <div style={styles.field}>
               <label style={styles.label}>Password</label>
               <input
@@ -98,23 +182,94 @@ export default function DoctorLogin() {
                 required
               />
             </div>
+
+            {/* Register only - Doctor fields */}
+            {mode === "register" && (
+              <>
+                <div style={styles.row}>
+                  <div style={styles.field}>
+                    <label style={styles.label}>Phone</label>
+                    <input
+                      style={styles.input}
+                      type="tel"
+                      name="phone"
+                      value={form.phone}
+                      onChange={handleChange}
+                      placeholder="+91 98765 43210"
+                      required
+                    />
+                  </div>
+                  <div style={styles.field}>
+                    <label style={styles.label}>Experience (years)</label>
+                    <input
+                      style={styles.input}
+                      type="number"
+                      name="experience"
+                      value={form.experience}
+                      onChange={handleChange}
+                      placeholder="5"
+                      min="0"
+                      required
+                    />
+                  </div>
+                </div>
+                <div style={styles.field}>
+                  <label style={styles.label}>Department</label>
+                  <select
+                    style={styles.input}
+                    name="department"
+                    value={form.department}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="">— Select Department —</option>
+                    {departments.map((d) => (
+                      <option key={d._id} value={d._id}>
+                        {d.icon} {d.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div style={styles.row}>
+                  <div style={styles.field}>
+                    <label style={styles.label}>Specialization</label>
+                    <input
+                      style={styles.input}
+                      type="text"
+                      name="specialization"
+                      value={form.specialization}
+                      onChange={handleChange}
+                      placeholder="e.g. Cardiologist"
+                    />
+                  </div>
+                  <div style={styles.field}>
+                    <label style={styles.label}>Consultation Fee (₹)</label>
+                    <input
+                      style={styles.input}
+                      type="number"
+                      name="fee"
+                      value={form.fee}
+                      onChange={handleChange}
+                      placeholder="500"
+                      min="0"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
             <button
               type="submit"
               style={{ ...styles.btn, ...(loading ? styles.btnDisabled : {}) }}
               disabled={loading}
             >
-              {loading ? "Signing in…" : "Access Doctor Dashboard →"}
+              {loading
+                ? "Please wait…"
+                : mode === "login"
+                  ? "Access Doctor Dashboard →"
+                  : "Register →"}
             </button>
           </form>
-
-          <div style={styles.divider} />
-
-          <p style={styles.footer}>
-            Not a doctor?{" "}
-            <span style={styles.link} onClick={() => navigate("/login")}>
-              Patient Login
-            </span>
-          </p>
         </div>
       </div>
     </div>
@@ -162,11 +317,7 @@ const styles = {
     marginBottom: 16,
   },
   heroSub: { fontSize: 16, opacity: 0.85 },
-  features: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 12,
-  },
+  features: { display: "flex", flexDirection: "column", gap: 12 },
   featureItem: {
     display: "flex",
     alignItems: "center",
@@ -183,13 +334,14 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     padding: 40,
+    overflowY: "auto",
   },
   card: {
     background: "#fff",
     borderRadius: 20,
     padding: "44px 44px",
     width: "100%",
-    maxWidth: 420,
+    maxWidth: 460,
     boxShadow: "0 8px 40px rgba(0,0,0,0.10)",
   },
   cardBadge: {
@@ -201,6 +353,30 @@ const styles = {
     padding: "4px 12px",
     borderRadius: 20,
     marginBottom: 16,
+  },
+  toggleRow: {
+    display: "flex",
+    gap: 8,
+    background: "#f1f5f9",
+    borderRadius: 10,
+    padding: 4,
+    marginBottom: 20,
+  },
+  toggleBtn: {
+    flex: 1,
+    padding: "9px",
+    borderRadius: 8,
+    border: "none",
+    background: "transparent",
+    color: "#64748b",
+    fontWeight: 600,
+    fontSize: 14,
+    cursor: "pointer",
+  },
+  toggleActive: {
+    background: "#fff",
+    color: "#0f172a",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
   },
   cardTitle: {
     fontSize: 26,
@@ -218,8 +394,9 @@ const styles = {
     marginBottom: 16,
     fontSize: 13,
   },
-  form: { display: "flex", flexDirection: "column", gap: 18 },
+  form: { display: "flex", flexDirection: "column", gap: 14 },
   field: { display: "flex", flexDirection: "column", gap: 5 },
+  row: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 },
   label: { fontSize: 13, fontWeight: 600, color: "#374151" },
   input: {
     padding: "12px",
@@ -227,6 +404,7 @@ const styles = {
     border: "1.5px solid #e2e8f0",
     fontSize: 14,
     outline: "none",
+    background: "#f8fafc",
   },
   btn: {
     marginTop: 6,
@@ -240,7 +418,4 @@ const styles = {
     cursor: "pointer",
   },
   btnDisabled: { opacity: 0.6 },
-  divider: { height: 1, background: "#f1f5f9", margin: "20px 0" },
-  footer: { textAlign: "center", fontSize: 13, color: "#64748b", margin: 0 },
-  link: { color: "#10b981", cursor: "pointer", fontWeight: 600 },
 };

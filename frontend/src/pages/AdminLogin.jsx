@@ -108,22 +108,6 @@ export default function AdminLogin() {
               {loading ? "Verifying…" : "Access Admin Panel →"}
             </button>
           </form>
-
-          <div style={styles.divider} />
-
-          <p style={styles.footer}>
-            Not an admin?{" "}
-            <span style={styles.link} onClick={() => navigate("/login")}>
-              Patient Login
-            </span>
-            {" · "}
-            <span
-              style={styles.link}
-              onClick={() => navigate("/doctor-login")}
-            >
-              Doctor Login
-            </span>
-          </p>
         </div>
       </div>
     </div>
@@ -209,7 +193,12 @@ const styles = {
     borderRadius: 20,
     marginBottom: 16,
   },
-  cardTitle: { fontSize: 26, fontWeight: 800, color: "#0f172a", margin: "0 0 4px" },
+  cardTitle: {
+    fontSize: 26,
+    fontWeight: 800,
+    color: "#0f172a",
+    margin: "0 0 4px",
+  },
   cardSub: { color: "#64748b", marginBottom: 24 },
   errorBox: {
     background: "#fef2f2",
@@ -242,7 +231,4 @@ const styles = {
     cursor: "pointer",
   },
   btnDisabled: { opacity: 0.6 },
-  divider: { height: 1, background: "#f1f5f9", margin: "20px 0" },
-  footer: { textAlign: "center", fontSize: 13, color: "#64748b", margin: 0 },
-  link: { color: "#1a73e8", cursor: "pointer", fontWeight: 600 },
 };
