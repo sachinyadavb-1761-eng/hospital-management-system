@@ -4,7 +4,6 @@ import Login from "./pages/Login";
 import DoctorLogin from "./pages/DoctorLogin";
 import AdminLogin from "./pages/AdminLogin";
 import Register from "./pages/Register";
-import StaffLogin from "./pages/StaffLogin";
 import Dashboard from "./pages/Dashboard";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import PatientDashboard from "./pages/Patientdashboard";
@@ -16,26 +15,18 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         {/* ══════════════════════════════════════════
-            PUBLIC — anyone can access
+            PUBLIC — Patient ke liye
         ══════════════════════════════════════════ */}
         <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
+        <Route path="/login" element={<Login />} /> {/* Patient login */}
+        <Route path="/register" element={<Register />} />{" "}
+        {/* Patient register - PUBLIC */}
+        <Route path="/unauthorized" element={<Unauthorized />} />
+        {/* ══════════════════════════════════════════
+            DOCTOR & ADMIN — Alag URL pe
+        ══════════════════════════════════════════ */}
         <Route path="/doctor-login" element={<DoctorLogin />} />
         <Route path="/admin-login" element={<AdminLogin />} />
-
-        {/* ══════════════════════════════════════════
-            REGISTER — sirf admin ya doctor access kar sakta hai
-        ══════════════════════════════════════════ */}
-        <Route
-          path="/register"
-          element={
-            <ProtectedRoute roles={["admin", "doctor"]}>
-              <Register />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Legacy staff login kept for backward compat, redirects to doctor-login */}
         <Route
           path="/staff/login"
           element={<Navigate to="/doctor-login" replace />}
@@ -44,8 +35,6 @@ export default function App() {
           path="/staff-login"
           element={<Navigate to="/doctor-login" replace />}
         />
-        <Route path="/unauthorized" element={<Unauthorized />} />
-
         {/* ══════════════════════════════════════════
             PATIENT only
         ══════════════════════════════════════════ */}
@@ -77,7 +66,6 @@ export default function App() {
           path="/profile"
           element={<Navigate to="/patient/dashboard" replace />}
         />
-
         {/* ══════════════════════════════════════════
             DOCTOR only
         ══════════════════════════════════════════ */}
@@ -109,9 +97,8 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
         {/* ══════════════════════════════════════════
-            ADMIN only
+            ADMIN only — Doctor register bhi yahan se hoga
         ══════════════════════════════════════════ */}
         <Route
           path="/admin"
@@ -154,10 +141,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* ══════════════════════════════════════════
-            Fallback
-        ══════════════════════════════════════════ */}
+        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
