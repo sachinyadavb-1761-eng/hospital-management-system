@@ -1,6 +1,14 @@
+// src/pages/Home.jsx
+// Changes:
+// 1. useLanguage hook — t() se saare texts translate hote hain
+// 2. LanguageSwitcher component navbar mein add kiya
+// 3. Responsive CSS — mobile/tablet/desktop sab handle
+// 4. Password eye icon yahan nahi (login pages mein hai)
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { isLoggedIn, getUser, logout, getDashboardPath } from "../utils/auth";
+import { useLanguage, LanguageSwitcher } from "../context/LanguageSwitcher";
 
 const DOCTORS = [
   {
@@ -33,36 +41,36 @@ const DOCTORS = [
   },
 ];
 
-const SERVICES = [
+const SERVICES_DATA = [
   {
     icon: "🫀",
-    title: "Cardiology",
-    desc: "Advanced heart care with cutting-edge diagnostics and treatment.",
+    titleKey: "Cardiology",
+    descKey: "Advanced heart care with cutting-edge diagnostics and treatment.",
   },
   {
     icon: "🧠",
-    title: "Neurology",
-    desc: "Expert brain & nervous system care for complex conditions.",
+    titleKey: "Neurology",
+    descKey: "Expert brain & nervous system care for complex conditions.",
   },
   {
     icon: "🦴",
-    title: "Orthopedics",
-    desc: "Bone, joint and spine treatments with modern techniques.",
+    titleKey: "Orthopedics",
+    descKey: "Bone, joint and spine treatments with modern techniques.",
   },
   {
     icon: "👶",
-    title: "Pediatrics",
-    desc: "Compassionate healthcare for children of all ages.",
+    titleKey: "Pediatrics",
+    descKey: "Compassionate healthcare for children of all ages.",
   },
   {
     icon: "👁️",
-    title: "Ophthalmology",
-    desc: "Complete eye care from routine checks to surgery.",
+    titleKey: "Ophthalmology",
+    descKey: "Complete eye care from routine checks to surgery.",
   },
   {
     icon: "🦷",
-    title: "Dentistry",
-    desc: "Full dental care including cosmetic and restorative work.",
+    titleKey: "Dentistry",
+    descKey: "Full dental care including cosmetic and restorative work.",
   },
 ];
 
@@ -77,8 +85,10 @@ const PAYMENT_METHODS = [
 
 export default function Home() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
+  const [menuOpen, setMenuOpen] = useState(false);
   const loggedIn = isLoggedIn();
   const authUser = loggedIn ? getUser() : null;
   const [contactForm, setContactForm] = useState({
@@ -97,6 +107,7 @@ export default function Home() {
   const scrollTo = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
     setActiveSection(id);
+    setMenuOpen(false);
   };
 
   const handleContact = (e) => {
@@ -111,11 +122,14 @@ export default function Home() {
       {/* ── Navbar ── */}
       <nav style={{ ...s.nav, ...(scrolled ? s.navScrolled : {}) }}>
         <div style={s.navInner}>
+          {/* Logo */}
           <div style={s.logo}>
             <div style={s.logoMark}>✚</div>
             <span style={s.logoText}>MediCore</span>
           </div>
-          <div style={s.navLinks}>
+
+          {/* Desktop Nav Links */}
+          <div style={s.navLinks} className="nav-links-desktop">
             {["home", "services", "doctors", "about", "contact"].map((sec) => (
               <button
                 key={sec}
@@ -125,11 +139,16 @@ export default function Home() {
                 }}
                 onClick={() => scrollTo(sec)}
               >
-                {sec.charAt(0).toUpperCase() + sec.slice(1)}
+                {t(sec)}
               </button>
             ))}
           </div>
-          <div style={s.navActions}>
+
+          {/* Desktop Actions */}
+          <div style={s.navActions} className="nav-actions-desktop">
+            {/* Language Switcher */}
+            <LanguageSwitcher />
+
             {loggedIn && authUser ? (
               <>
                 <span style={s.navUserName}>
@@ -140,27 +159,93 @@ export default function Home() {
                   style={s.dashboardBtn}
                   onClick={() => navigate(getDashboardPath(authUser.role))}
                 >
-                  My Dashboard →
+                  {t("myDashboard")}
                 </button>
                 <button style={s.navLogoutBtn} onClick={logout}>
-                  Logout
+                  {t("logout")}
                 </button>
               </>
             ) : (
               <>
                 <button style={s.loginBtn} onClick={() => navigate("/login")}>
-                  Login
+                  {t("login")}
                 </button>
                 <button
                   style={s.registerBtn}
                   onClick={() => navigate("/register")}
                 >
-                  Register Free
+                  {t("registerFree")}
                 </button>
               </>
             )}
           </div>
+
+          {/* Mobile Hamburger */}
+          <button
+            style={s.hamburger}
+            className="hamburger"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Menu"
+          >
+            {menuOpen ? "✕" : "☰"}
+          </button>
         </div>
+
+        {/* Mobile Menu */}
+        {menuOpen && (
+          <div style={s.mobileMenu}>
+            {["home", "services", "doctors", "about", "contact"].map((sec) => (
+              <button
+                key={sec}
+                style={s.mobileNavLink}
+                onClick={() => scrollTo(sec)}
+              >
+                {t(sec)}
+              </button>
+            ))}
+            <div style={s.mobileDivider} />
+            <LanguageSwitcher
+              style={{ justifyContent: "center", marginBottom: 8 }}
+            />
+            {loggedIn && authUser ? (
+              <>
+                <button
+                  style={s.mobileDashBtn}
+                  onClick={() => {
+                    navigate(getDashboardPath(authUser.role));
+                    setMenuOpen(false);
+                  }}
+                >
+                  {t("myDashboard")}
+                </button>
+                <button style={s.mobileLogoutBtn} onClick={logout}>
+                  {t("logout")}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  style={s.mobileLoginBtn}
+                  onClick={() => {
+                    navigate("/login");
+                    setMenuOpen(false);
+                  }}
+                >
+                  {t("login")}
+                </button>
+                <button
+                  style={s.mobileRegisterBtn}
+                  onClick={() => {
+                    navigate("/register");
+                    setMenuOpen(false);
+                  }}
+                >
+                  {t("registerFree")}
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </nav>
 
       {/* ── Hero ── */}
@@ -168,36 +253,31 @@ export default function Home() {
         <div style={s.heroBg} />
         <div style={s.heroGrid} />
         <div style={s.heroContent}>
-          <div style={s.heroTag}>
-            🏥 India's #1 Hospital Management Platform
-          </div>
+          <div style={s.heroTag}>🏥 {t("tagline")}</div>
           <h1 style={s.heroTitle}>
-            Your Health, <br />
-            <span style={s.heroAccent}>Our Priority</span>
+            {t("heroTitle1")} <br />
+            <span style={s.heroAccent}>{t("heroTitle2")}</span>
           </h1>
-          <p style={s.heroDesc}>
-            Book appointments, consult top doctors, and manage your health
-            journey — all in one place.
-          </p>
+          <p style={s.heroDesc}>{t("heroDesc")}</p>
           <div style={s.heroBtns}>
             <button
               style={s.heroCtaPrimary}
               onClick={() => navigate("/register")}
             >
-              Book Appointment →
+              {t("bookAppointment")}
             </button>
             <button
               style={s.heroCtaSecondary}
               onClick={() => scrollTo("services")}
             >
-              Explore Services
+              {t("exploreServices")}
             </button>
           </div>
           <div style={s.heroStats}>
             {[
-              ["500+", "Doctors"],
-              ["50K+", "Patients"],
-              ["98%", "Satisfaction"],
+              ["500+", t("statDoctors")],
+              ["50K+", t("statPatients")],
+              ["98%", t("statSatisfaction")],
             ].map(([val, label]) => (
               <div key={label} style={s.heroStat}>
                 <span style={s.heroStatVal}>{val}</span>
@@ -210,7 +290,7 @@ export default function Home() {
           <div style={s.heroCard}>
             <div style={s.heroCardHeader}>
               <div style={s.heroCardDot} />
-              <span style={s.heroCardTitle}>Next Appointment</span>
+              <span style={s.heroCardTitle}>{t("nextAppointment")}</span>
             </div>
             <div style={s.heroCardDoctor}>
               <div style={{ ...s.heroCardAvatar, background: "#0ea5e9" }}>
@@ -221,7 +301,7 @@ export default function Home() {
                 <div style={s.heroCardSpec}>Cardiologist</div>
               </div>
             </div>
-            <div style={s.heroCardStatus}>✅ Confirmed</div>
+            <div style={s.heroCardStatus}>{t("confirmed")}</div>
           </div>
         </div>
       </section>
@@ -229,21 +309,24 @@ export default function Home() {
       {/* ── Services ── */}
       <section id="services" style={s.section}>
         <div style={s.sectionInner}>
-          <div style={s.sectionTag}>What We Offer</div>
+          <div style={s.sectionTag}>{t("whatWeOffer")}</div>
           <h2 style={s.sectionTitle}>
-            Our <span style={s.accent}>Specializations</span>
+            {t("ourSpecializations").split(" ").slice(0, -1).join(" ")}{" "}
+            <span style={s.accent}>
+              {t("ourSpecializations").split(" ").slice(-1)}
+            </span>
           </h2>
           <div style={s.serviceGrid}>
-            {SERVICES.map((sv) => (
-              <div key={sv.title} style={s.serviceCard}>
+            {SERVICES_DATA.map((sv) => (
+              <div key={sv.titleKey} style={s.serviceCard}>
                 <div style={s.serviceIcon}>{sv.icon}</div>
-                <h3 style={s.serviceTitle}>{sv.title}</h3>
-                <p style={s.serviceDesc}>{sv.desc}</p>
+                <h3 style={s.serviceTitle}>{sv.titleKey}</h3>
+                <p style={s.serviceDesc}>{sv.descKey}</p>
                 <button
                   style={s.serviceBtn}
                   onClick={() => navigate("/register")}
                 >
-                  Book Now →
+                  {t("bookNow")}
                 </button>
               </div>
             ))}
@@ -254,9 +337,12 @@ export default function Home() {
       {/* ── Doctors ── */}
       <section id="doctors" style={{ ...s.section, background: "#f8fafc" }}>
         <div style={s.sectionInner}>
-          <div style={s.sectionTag}>Meet The Team</div>
+          <div style={s.sectionTag}>{t("meetTheTeam")}</div>
           <h2 style={s.sectionTitle}>
-            Our <span style={s.accent}>Top Doctors</span>
+            {t("ourTopDoctors").split(" ").slice(0, -2).join(" ")}{" "}
+            <span style={s.accent}>
+              {t("ourTopDoctors").split(" ").slice(-2).join(" ")}
+            </span>
           </h2>
           <div style={s.doctorGrid}>
             {DOCTORS.map((doc) => (
@@ -270,7 +356,7 @@ export default function Home() {
                   style={s.doctorBtn}
                   onClick={() => navigate("/register")}
                 >
-                  Book Appointment
+                  {t("bookAppointment")}
                 </button>
               </div>
             ))}
@@ -282,7 +368,7 @@ export default function Home() {
       <section style={{ ...s.section, background: "#0f172a" }}>
         <div style={s.sectionInner}>
           <h2 style={{ ...s.sectionTitle, color: "#fff", textAlign: "center" }}>
-            All Payment Methods
+            {t("allPaymentMethods")}
           </h2>
           <div style={s.paymentGrid}>
             {PAYMENT_METHODS.map((pm) => (
@@ -301,27 +387,34 @@ export default function Home() {
           <div style={s.contactGrid}>
             <div style={s.contactInfo}>
               <h2 style={s.sectionTitle}>
-                Contact <span style={s.accent}>Us</span>
+                {t("contactUs").split(" ")[0]}{" "}
+                <span style={s.accent}>
+                  {t("contactUs").split(" ").slice(1).join(" ")}
+                </span>
               </h2>
-              <p>📍 123 Medical Hub, New Delhi, India</p>
-              <p>📞 +91 98765 43210</p>
+              <p>{t("address")}</p>
+              <p>{t("phone")}</p>
             </div>
             <form onSubmit={handleContact} style={s.contactForm}>
-              {submitted && <div style={s.successBox}>✅ Message sent!</div>}
-              <input style={s.contactInput} placeholder="Your Name" required />
+              {submitted && <div style={s.successBox}>{t("messageSent")}</div>}
+              <input
+                style={s.contactInput}
+                placeholder={t("yourName")}
+                required
+              />
               <input
                 style={s.contactInput}
                 type="email"
-                placeholder="Your Email"
+                placeholder={t("yourEmail")}
                 required
               />
               <textarea
                 style={{ ...s.contactInput, height: 100 }}
-                placeholder="Message"
+                placeholder={t("message")}
                 required
               />
               <button type="submit" style={s.contactBtn}>
-                Send Message
+                {t("sendMessage")}
               </button>
             </form>
           </div>
@@ -335,6 +428,20 @@ export default function Home() {
           <p style={s.footerCopy}>© 2026 MediCore. All rights reserved.</p>
         </div>
       </footer>
+
+      {/* ── Responsive Styles (CSS-in-JS via style tag) ── */}
+      <style>{`
+        /* ── Mobile (max 640px) ── */
+        @media (max-width: 640px) {
+          .nav-links-desktop { display: none !important; }
+          .nav-actions-desktop { display: none !important; }
+          .hamburger { display: flex !important; }
+        }
+        /* ── Tablet & Desktop ── */
+        @media (min-width: 641px) {
+          .hamburger { display: none !important; }
+        }
+      `}</style>
     </div>
   );
 }
@@ -345,6 +452,8 @@ const s = {
     background: "#fff",
     overflowX: "hidden",
   },
+
+  // ── Navbar ──
   nav: {
     position: "fixed",
     top: 0,
@@ -362,12 +471,13 @@ const s = {
   navInner: {
     maxWidth: 1200,
     margin: "0 auto",
-    padding: "0 40px",
+    padding: "0 clamp(16px, 4vw, 40px)", // responsive padding
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 12,
   },
-  logo: { display: "flex", alignItems: "center", gap: 10 },
+  logo: { display: "flex", alignItems: "center", gap: 10, flexShrink: 0 },
   logoMark: {
     width: 36,
     height: 36,
@@ -379,52 +489,44 @@ const s = {
     color: "#fff",
     fontWeight: 900,
   },
-  logoText: { fontSize: 20, fontWeight: 800, color: "#0f172a" },
+  logoText: {
+    fontSize: "clamp(16px, 2vw, 20px)",
+    fontWeight: 800,
+    color: "#0f172a",
+  },
   navLinks: { display: "flex", gap: 4 },
   navLink: {
-    padding: "8px 16px",
+    padding: "8px 14px",
     border: "none",
     background: "transparent",
     color: "#475569",
-    fontSize: 15,
+    fontSize: "clamp(13px, 1.2vw, 15px)",
     cursor: "pointer",
   },
   navLinkActive: { color: "#0ea5e9", fontWeight: 700 },
-  navActions: { display: "flex", gap: 12, alignItems: "center" },
-
-  // NEW: Staff Link Style
-  staffLink: {
-    background: "transparent",
-    border: "none",
-    color: "#94a3b8",
-    fontSize: 13,
-    cursor: "pointer",
-    fontWeight: 500,
-  },
-
+  navActions: { display: "flex", gap: 8, alignItems: "center" },
   loginBtn: {
-    padding: "9px 20px",
+    padding: "8px 16px",
     borderRadius: 10,
     border: "1.5px solid #e2e8f0",
     background: "transparent",
     fontWeight: 600,
     cursor: "pointer",
+    fontSize: 13,
+    whiteSpace: "nowrap",
   },
   registerBtn: {
-    padding: "9px 20px",
+    padding: "8px 16px",
     borderRadius: 10,
     border: "none",
     background: "#0ea5e9",
     color: "#fff",
     fontWeight: 700,
     cursor: "pointer",
+    fontSize: 13,
+    whiteSpace: "nowrap",
   },
-  // Auth-aware navbar items
-  navUserName: {
-    fontSize: 14,
-    fontWeight: 600,
-    color: "#0f172a",
-  },
+  navUserName: { fontSize: 13, fontWeight: 600, color: "#0f172a" },
   navRoleBadge: {
     fontSize: 11,
     fontWeight: 700,
@@ -435,32 +537,117 @@ const s = {
     borderRadius: 20,
   },
   dashboardBtn: {
-    padding: "9px 18px",
+    padding: "8px 14px",
     borderRadius: 10,
     border: "none",
     background: "#0f172a",
     color: "#fff",
     fontWeight: 700,
-    fontSize: 13,
+    fontSize: 12,
     cursor: "pointer",
+    whiteSpace: "nowrap",
   },
   navLogoutBtn: {
-    padding: "9px 18px",
+    padding: "8px 14px",
     borderRadius: 10,
     border: "1.5px solid #e2e8f0",
     background: "transparent",
     color: "#ef4444",
     fontWeight: 600,
-    fontSize: 13,
+    fontSize: 12,
     cursor: "pointer",
   },
+
+  // ── Hamburger ──
+  hamburger: {
+    display: "none",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 40,
+    height: 40,
+    border: "1.5px solid rgba(255,255,255,0.3)",
+    borderRadius: 10,
+    background: "transparent",
+    color: "#fff",
+    fontSize: 18,
+    cursor: "pointer",
+    flexShrink: 0,
+  },
+
+  // ── Mobile Menu ──
+  mobileMenu: {
+    background: "rgba(15,23,42,0.97)",
+    backdropFilter: "blur(12px)",
+    padding: "20px 24px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+    borderTop: "1px solid rgba(255,255,255,0.1)",
+  },
+  mobileNavLink: {
+    padding: "12px 16px",
+    border: "none",
+    background: "rgba(255,255,255,0.05)",
+    color: "#e2e8f0",
+    fontSize: 15,
+    fontWeight: 500,
+    borderRadius: 10,
+    cursor: "pointer",
+    textAlign: "left",
+  },
+  mobileDivider: {
+    height: 1,
+    background: "rgba(255,255,255,0.1)",
+    margin: "8px 0",
+  },
+  mobileLoginBtn: {
+    padding: "12px",
+    border: "1.5px solid rgba(255,255,255,0.2)",
+    background: "transparent",
+    color: "#fff",
+    fontWeight: 600,
+    borderRadius: 10,
+    cursor: "pointer",
+  },
+  mobileRegisterBtn: {
+    padding: "12px",
+    border: "none",
+    background: "#0ea5e9",
+    color: "#fff",
+    fontWeight: 700,
+    borderRadius: 10,
+    cursor: "pointer",
+  },
+  mobileDashBtn: {
+    padding: "12px",
+    border: "none",
+    background: "#fff",
+    color: "#0f172a",
+    fontWeight: 700,
+    borderRadius: 10,
+    cursor: "pointer",
+  },
+  mobileLogoutBtn: {
+    padding: "12px",
+    border: "1.5px solid rgba(239,68,68,0.4)",
+    background: "transparent",
+    color: "#f87171",
+    fontWeight: 600,
+    borderRadius: 10,
+    cursor: "pointer",
+  },
+
+  // ── Hero ──
   hero: {
     minHeight: "100vh",
     display: "flex",
     alignItems: "center",
+    flexWrap: "wrap",
     position: "relative",
     background: "#0f172a",
-    padding: "120px 40px",
+    padding:
+      "clamp(100px, 12vw, 140px) clamp(20px, 5vw, 60px) clamp(60px, 8vw, 80px)",
+    gap: 40,
   },
   heroBg: {
     position: "absolute",
@@ -475,7 +662,12 @@ const s = {
       "radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)",
     backgroundSize: "40px 40px",
   },
-  heroContent: { flex: 1, position: "relative", zIndex: 1 },
+  heroContent: {
+    flex: "1 1 300px",
+    position: "relative",
+    zIndex: 1,
+    minWidth: 0,
+  },
   heroTag: {
     display: "inline-block",
     background: "rgba(14,165,233,0.1)",
@@ -486,45 +678,58 @@ const s = {
     marginBottom: 20,
   },
   heroTitle: {
-    fontSize: 60,
+    fontSize: "clamp(32px, 6vw, 64px)",
     fontWeight: 900,
     color: "#fff",
     lineHeight: 1.1,
     marginBottom: 20,
   },
   heroAccent: { color: "#0ea5e9" },
-  heroDesc: { fontSize: 18, color: "#94a3b8", marginBottom: 30, maxWidth: 500 },
-  heroBtns: { display: "flex", gap: 15, marginBottom: 40 },
+  heroDesc: {
+    fontSize: "clamp(14px, 1.5vw, 18px)",
+    color: "#94a3b8",
+    marginBottom: 30,
+    maxWidth: 500,
+  },
+  heroBtns: { display: "flex", gap: 15, marginBottom: 40, flexWrap: "wrap" },
   heroCtaPrimary: {
-    padding: "14px 28px",
+    padding: "12px 24px",
     borderRadius: 10,
     border: "none",
     background: "#0ea5e9",
     color: "#fff",
     fontWeight: 700,
     cursor: "pointer",
+    fontSize: "clamp(13px, 1.2vw, 15px)",
   },
   heroCtaSecondary: {
-    padding: "14px 28px",
+    padding: "12px 24px",
     borderRadius: 10,
     border: "1px solid #334155",
     background: "transparent",
     color: "#fff",
     cursor: "pointer",
+    fontSize: "clamp(13px, 1.2vw, 15px)",
   },
-  heroStats: { display: "flex", gap: 30 },
+  heroStats: {
+    display: "flex",
+    gap: "clamp(16px, 3vw, 30px)",
+    flexWrap: "wrap",
+  },
+  heroStat: {},
   heroStatVal: {
-    fontSize: 24,
+    fontSize: "clamp(18px, 2.5vw, 24px)",
     fontWeight: 800,
     color: "#fff",
     display: "block",
   },
   heroStatLabel: { fontSize: 12, color: "#64748b" },
   heroVisual: {
-    flex: 1,
+    flex: "0 1 300px",
     display: "flex",
     justifyContent: "center",
     position: "relative",
+    zIndex: 1,
   },
   heroCard: {
     background: "rgba(255,255,255,0.05)",
@@ -532,7 +737,7 @@ const s = {
     border: "1px solid rgba(255,255,255,0.1)",
     borderRadius: 15,
     padding: 20,
-    width: 250,
+    width: "min(250px, 80vw)",
   },
   heroCardHeader: {
     display: "flex",
@@ -562,11 +767,14 @@ const s = {
     justifyContent: "center",
     color: "#fff",
     fontWeight: 700,
+    flexShrink: 0,
   },
   heroCardName: { color: "#fff", fontSize: 14, fontWeight: 600 },
   heroCardSpec: { color: "#64748b", fontSize: 12 },
   heroCardStatus: { color: "#10b981", fontSize: 12, fontWeight: 600 },
-  section: { padding: "80px 40px" },
+
+  // ── Sections ──
+  section: { padding: "clamp(50px, 8vw, 80px) clamp(16px, 4vw, 40px)" },
   sectionInner: { maxWidth: 1200, margin: "0 auto" },
   sectionTag: {
     color: "#0ea5e9",
@@ -577,25 +785,30 @@ const s = {
     display: "block",
   },
   sectionTitle: {
-    fontSize: 36,
+    fontSize: "clamp(24px, 3.5vw, 36px)",
     fontWeight: 800,
     color: "#0f172a",
     marginBottom: 40,
   },
   accent: { color: "#0ea5e9" },
+
   serviceGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
     gap: 20,
   },
   serviceCard: {
-    padding: 30,
+    padding: "clamp(20px, 3vw, 30px)",
     borderRadius: 20,
     border: "1px solid #f1f5f9",
     background: "#fff",
   },
   serviceIcon: { fontSize: 40, marginBottom: 20 },
-  serviceTitle: { fontSize: 20, fontWeight: 700, marginBottom: 10 },
+  serviceTitle: {
+    fontSize: "clamp(16px, 1.5vw, 20px)",
+    fontWeight: 700,
+    marginBottom: 10,
+  },
   serviceDesc: { color: "#64748b", fontSize: 14, marginBottom: 20 },
   serviceBtn: {
     background: "transparent",
@@ -604,9 +817,10 @@ const s = {
     fontWeight: 700,
     cursor: "pointer",
   },
+
   doctorGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))",
     gap: 20,
   },
   doctorCard: {
@@ -627,21 +841,27 @@ const s = {
     color: "#fff",
     fontWeight: 800,
   },
-  doctorName: { fontSize: 16, fontWeight: 700, marginBottom: 5 },
+  doctorName: {
+    fontSize: "clamp(14px, 1.2vw, 16px)",
+    fontWeight: 700,
+    marginBottom: 5,
+  },
   doctorSpec: { color: "#0ea5e9", fontSize: 13, marginBottom: 15 },
   doctorBtn: {
     width: "100%",
-    padding: "10px",
+    padding: 10,
     borderRadius: 8,
     border: "none",
     background: "#0f172a",
     color: "#fff",
     fontWeight: 600,
     cursor: "pointer",
+    fontSize: "clamp(12px, 1vw, 14px)",
   },
+
   paymentGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, 45%), 1fr))",
     gap: 15,
   },
   paymentCard: {
@@ -652,9 +872,14 @@ const s = {
     alignItems: "center",
     gap: 10,
   },
-  paymentIcon: { fontSize: 20 },
-  paymentName: { color: "#fff", fontSize: 14 },
-  contactGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 50 },
+  paymentIcon: { fontSize: 20, flexShrink: 0 },
+  paymentName: { color: "#fff", fontSize: "clamp(12px, 1vw, 14px)" },
+
+  contactGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
+    gap: "clamp(24px, 4vw, 50px)",
+  },
   contactInfo: { display: "flex", flexDirection: "column", gap: 15 },
   contactForm: { display: "flex", flexDirection: "column", gap: 15 },
   contactInput: {
@@ -662,6 +887,9 @@ const s = {
     borderRadius: 8,
     border: "1px solid #e2e8f0",
     outline: "none",
+    fontSize: 14,
+    width: "100%",
+    boxSizing: "border-box",
   },
   contactBtn: {
     padding: "12px",
@@ -675,30 +903,16 @@ const s = {
   successBox: {
     background: "#d1fae5",
     color: "#065f46",
-    padding: "10px",
+    padding: 10,
     borderRadius: 8,
     marginBottom: 10,
   },
-  footer: { background: "#0f172a", padding: "40px", textAlign: "center" },
+
+  footer: {
+    background: "#0f172a",
+    padding: "clamp(24px, 4vw, 40px)",
+    textAlign: "center",
+  },
+  footerInner: {},
   footerCopy: { color: "#64748b", fontSize: 12, marginTop: 10 },
-  footerStaffLinks: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    marginTop: 16,
-    paddingTop: 16,
-    borderTop: "1px solid #1e293b",
-  },
-  footerStaffLabel: { color: "#475569", fontSize: 12 },
-  footerStaffBtn: {
-    background: "transparent",
-    border: "1px solid #1e293b",
-    color: "#64748b",
-    fontSize: 12,
-    fontWeight: 600,
-    padding: "5px 12px",
-    borderRadius: 20,
-    cursor: "pointer",
-  },
 };
