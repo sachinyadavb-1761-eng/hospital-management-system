@@ -4,6 +4,7 @@
 // 2. LanguageSwitcher component navbar mein add kiya
 // 3. Responsive CSS — mobile/tablet/desktop sab handle
 // 4. Password eye icon yahan nahi (login pages mein hai)
+// 5. FIX: Dark theme — service cards, doctor cards, contact section sab dark
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -146,7 +147,6 @@ export default function Home() {
 
           {/* Desktop Actions */}
           <div style={s.navActions} className="nav-actions-desktop">
-            {/* Language Switcher */}
             <LanguageSwitcher />
 
             {loggedIn && authUser ? (
@@ -307,10 +307,10 @@ export default function Home() {
       </section>
 
       {/* ── Services ── */}
-      <section id="services" style={s.section}>
+      <section id="services" style={{ ...s.section, background: "#0f172a" }}>
         <div style={s.sectionInner}>
           <div style={s.sectionTag}>{t("whatWeOffer")}</div>
-          <h2 style={s.sectionTitle}>
+          <h2 style={{ ...s.sectionTitle, color: "#fff" }}>
             {t("ourSpecializations").split(" ").slice(0, -1).join(" ")}{" "}
             <span style={s.accent}>
               {t("ourSpecializations").split(" ").slice(-1)}
@@ -335,10 +335,10 @@ export default function Home() {
       </section>
 
       {/* ── Doctors ── */}
-      <section id="doctors" style={{ ...s.section, background: "#f8fafc" }}>
+      <section id="doctors" style={{ ...s.section, background: "#0f1f35" }}>
         <div style={s.sectionInner}>
           <div style={s.sectionTag}>{t("meetTheTeam")}</div>
-          <h2 style={s.sectionTitle}>
+          <h2 style={{ ...s.sectionTitle, color: "#fff" }}>
             {t("ourTopDoctors").split(" ").slice(0, -2).join(" ")}{" "}
             <span style={s.accent}>
               {t("ourTopDoctors").split(" ").slice(-2).join(" ")}
@@ -382,18 +382,18 @@ export default function Home() {
       </section>
 
       {/* ── Contact ── */}
-      <section id="contact" style={s.section}>
+      <section id="contact" style={{ ...s.section, background: "#0f1f35" }}>
         <div style={s.sectionInner}>
           <div style={s.contactGrid}>
             <div style={s.contactInfo}>
-              <h2 style={s.sectionTitle}>
+              <h2 style={{ ...s.sectionTitle, color: "#fff" }}>
                 {t("contactUs").split(" ")[0]}{" "}
                 <span style={s.accent}>
                   {t("contactUs").split(" ").slice(1).join(" ")}
                 </span>
               </h2>
-              <p>{t("address")}</p>
-              <p>{t("phone")}</p>
+              <p style={{ color: "#94a3b8" }}>{t("address")}</p>
+              <p style={{ color: "#94a3b8" }}>{t("phone")}</p>
             </div>
             <form onSubmit={handleContact} style={s.contactForm}>
               {submitted && <div style={s.successBox}>{t("messageSent")}</div>}
@@ -429,15 +429,13 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* ── Responsive Styles (CSS-in-JS via style tag) ── */}
+      {/* ── Responsive Styles ── */}
       <style>{`
-        /* ── Mobile (max 640px) ── */
         @media (max-width: 640px) {
           .nav-links-desktop { display: none !important; }
           .nav-actions-desktop { display: none !important; }
           .hamburger { display: flex !important; }
         }
-        /* ── Tablet & Desktop ── */
         @media (min-width: 641px) {
           .hamburger { display: none !important; }
         }
@@ -449,7 +447,7 @@ export default function Home() {
 const s = {
   root: {
     fontFamily: "'Inter', sans-serif",
-    background: "#0f172a",
+    background: "#0f172a", // ← FIXED: dark background globally
     overflowX: "hidden",
   },
 
@@ -464,14 +462,14 @@ const s = {
     transition: "all 0.3s",
   },
   navScrolled: {
-    background: "rgba(255,255,255,0.95)",
-    boxShadow: "0 2px 20px rgba(0,0,0,0.08)",
+    background: "rgba(15,23,42,0.97)",
+    boxShadow: "0 2px 20px rgba(0,0,0,0.3)",
     padding: "14px 0",
   },
   navInner: {
     maxWidth: 1200,
     margin: "0 auto",
-    padding: "0 clamp(16px, 4vw, 40px)", // responsive padding
+    padding: "0 clamp(16px, 4vw, 40px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -492,14 +490,14 @@ const s = {
   logoText: {
     fontSize: "clamp(16px, 2vw, 20px)",
     fontWeight: 800,
-    color: "#0f172a",
+    color: "#fff", // ← FIXED: white text on dark navbar
   },
   navLinks: { display: "flex", gap: 4 },
   navLink: {
     padding: "8px 14px",
     border: "none",
     background: "transparent",
-    color: "#475569",
+    color: "#94a3b8", // ← FIXED: light color on dark navbar
     fontSize: "clamp(13px, 1.2vw, 15px)",
     cursor: "pointer",
   },
@@ -508,8 +506,9 @@ const s = {
   loginBtn: {
     padding: "8px 16px",
     borderRadius: 10,
-    border: "1.5px solid #e2e8f0",
+    border: "1.5px solid rgba(255,255,255,0.2)",
     background: "transparent",
+    color: "#fff", // ← FIXED
     fontWeight: 600,
     cursor: "pointer",
     fontSize: 13,
@@ -526,7 +525,7 @@ const s = {
     fontSize: 13,
     whiteSpace: "nowrap",
   },
-  navUserName: { fontSize: 13, fontWeight: 600, color: "#0f172a" },
+  navUserName: { fontSize: 13, fontWeight: 600, color: "#fff" },
   navRoleBadge: {
     fontSize: 11,
     fontWeight: 700,
@@ -540,7 +539,7 @@ const s = {
     padding: "8px 14px",
     borderRadius: 10,
     border: "none",
-    background: "#0f172a",
+    background: "#0ea5e9",
     color: "#fff",
     fontWeight: 700,
     fontSize: 12,
@@ -550,9 +549,9 @@ const s = {
   navLogoutBtn: {
     padding: "8px 14px",
     borderRadius: 10,
-    border: "1.5px solid #e2e8f0",
+    border: "1.5px solid rgba(239,68,68,0.4)",
     background: "transparent",
-    color: "#ef4444",
+    color: "#f87171",
     fontWeight: 600,
     fontSize: 12,
     cursor: "pointer",
@@ -621,8 +620,8 @@ const s = {
   mobileDashBtn: {
     padding: "12px",
     border: "none",
-    background: "#fff",
-    color: "#0f172a",
+    background: "#0ea5e9",
+    color: "#fff",
     fontWeight: 700,
     borderRadius: 10,
     cursor: "pointer",
@@ -787,11 +786,12 @@ const s = {
   sectionTitle: {
     fontSize: "clamp(24px, 3.5vw, 36px)",
     fontWeight: 800,
-    color: "#0f172a",
+    color: "#fff", // ← FIXED: white by default
     marginBottom: 40,
   },
   accent: { color: "#0ea5e9" },
 
+  // ── Services ── FIXED: Dark cards
   serviceGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
@@ -800,16 +800,17 @@ const s = {
   serviceCard: {
     padding: "clamp(20px, 3vw, 30px)",
     borderRadius: 20,
-    border: "1px solid #f1f5f9",
-    background: "#fff",
+    border: "1px solid rgba(255,255,255,0.08)",
+    background: "rgba(255,255,255,0.05)", // ← FIXED: dark card
   },
   serviceIcon: { fontSize: 40, marginBottom: 20 },
   serviceTitle: {
     fontSize: "clamp(16px, 1.5vw, 20px)",
     fontWeight: 700,
     marginBottom: 10,
+    color: "#fff", // ← FIXED: white text
   },
-  serviceDesc: { color: "#64748b", fontSize: 14, marginBottom: 20 },
+  serviceDesc: { color: "#94a3b8", fontSize: 14, marginBottom: 20 }, // ← FIXED
   serviceBtn: {
     background: "transparent",
     border: "none",
@@ -818,17 +819,18 @@ const s = {
     cursor: "pointer",
   },
 
+  // ── Doctors ── FIXED: Dark cards
   doctorGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))",
     gap: 20,
   },
   doctorCard: {
-    background: "#fff",
+    background: "rgba(255,255,255,0.05)", // ← FIXED: dark card
     padding: 20,
     borderRadius: 20,
     textAlign: "center",
-    border: "1px solid #f1f5f9",
+    border: "1px solid rgba(255,255,255,0.08)", // ← FIXED
   },
   doctorAvatar: {
     width: 60,
@@ -845,6 +847,7 @@ const s = {
     fontSize: "clamp(14px, 1.2vw, 16px)",
     fontWeight: 700,
     marginBottom: 5,
+    color: "#fff", // ← FIXED: white text
   },
   doctorSpec: { color: "#0ea5e9", fontSize: 13, marginBottom: 15 },
   doctorBtn: {
@@ -852,13 +855,14 @@ const s = {
     padding: 10,
     borderRadius: 8,
     border: "none",
-    background: "#0f172a",
+    background: "#0ea5e9", // ← FIXED: blue button
     color: "#fff",
     fontWeight: 600,
     cursor: "pointer",
     fontSize: "clamp(12px, 1vw, 14px)",
   },
 
+  // ── Payment ──
   paymentGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, 45%), 1fr))",
@@ -875,6 +879,7 @@ const s = {
   paymentIcon: { fontSize: 20, flexShrink: 0 },
   paymentName: { color: "#fff", fontSize: "clamp(12px, 1vw, 14px)" },
 
+  // ── Contact ── FIXED: Dark theme
   contactGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
@@ -885,17 +890,19 @@ const s = {
   contactInput: {
     padding: "12px",
     borderRadius: 8,
-    border: "1px solid #e2e8f0",
+    border: "1px solid rgba(255,255,255,0.15)", // ← FIXED
     outline: "none",
     fontSize: 14,
     width: "100%",
     boxSizing: "border-box",
+    background: "rgba(255,255,255,0.08)", // ← FIXED: dark input
+    color: "#fff", // ← FIXED: white text in input
   },
   contactBtn: {
     padding: "12px",
     borderRadius: 8,
     border: "none",
-    background: "#0f172a",
+    background: "#0ea5e9", // ← FIXED: blue button
     color: "#fff",
     fontWeight: 700,
     cursor: "pointer",
@@ -908,8 +915,9 @@ const s = {
     marginBottom: 10,
   },
 
+  // ── Footer ──
   footer: {
-    background: "#0f172a",
+    background: "#0a0f1e",
     padding: "clamp(24px, 4vw, 40px)",
     textAlign: "center",
   },
