@@ -449,7 +449,7 @@ export default function Home() {
 const s = {
   root: {
     fontFamily: "'Inter', sans-serif",
-    background: "#fff",
+    background: "#0f172a",
     overflowX: "hidden",
   },
 
