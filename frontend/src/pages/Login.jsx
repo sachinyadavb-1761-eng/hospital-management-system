@@ -1,8 +1,5 @@
 // src/pages/Login.jsx
-// Changes:
-// 1. Password eye icon — show/hide toggle
-// 2. useLanguage — translations
-// 3. Responsive — mobile mein left panel hide, form full width
+// Language dropdown switcher — ek baar click → teeno pages pe apply
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -52,7 +49,6 @@ export default function Login() {
 
   return (
     <div style={styles.page}>
-      {/* ── Responsive styles ── */}
       <style>{`
         @media (max-width: 640px) {
           .login-left { display: none !important; }
@@ -94,8 +90,8 @@ export default function Login() {
 
       {/* RIGHT */}
       <div style={styles.right} className="login-right">
-        {/* Language switcher at top */}
-        <div style={{ position: "absolute", top: 20, right: 20 }}>
+        {/* Language Dropdown — top right corner */}
+        <div style={{ position: "absolute", top: 20, right: 20, zIndex: 100 }}>
           <LanguageSwitcher />
         </div>
 
@@ -143,7 +139,6 @@ export default function Login() {
                   title={showPassword ? t("hidePassword") : t("showPassword")}
                 >
                   {showPassword ? (
-                    // Eye-off icon
                     <svg
                       width="18"
                       height="18"
@@ -159,7 +154,6 @@ export default function Login() {
                       <line x1="1" y1="1" x2="23" y2="23" />
                     </svg>
                   ) : (
-                    // Eye icon
                     <svg
                       width="18"
                       height="18"
@@ -246,7 +240,6 @@ const styles = {
   statItem: { display: "flex", flexDirection: "column" },
   statVal: { fontSize: 26, fontWeight: 800 },
   statLabel: { fontSize: 13, opacity: 0.7 },
-
   right: {
     flex: 1,
     display: "flex",
@@ -286,8 +279,6 @@ const styles = {
     width: "100%",
     boxSizing: "border-box",
   },
-
-  // Password field with eye icon
   passwordWrap: { position: "relative", display: "flex", alignItems: "center" },
   inputPassword: {
     padding: "12px 44px 12px 12px",
@@ -312,7 +303,6 @@ const styles = {
     borderRadius: 6,
     transition: "color 0.2s",
   },
-
   btn: {
     marginTop: 10,
     padding: "14px",

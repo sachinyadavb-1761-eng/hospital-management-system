@@ -1,3 +1,6 @@
+// src/pages/Patientdashboard.jsx
+// Language dropdown — ek baar click → teeno pages pe apply (localStorage)
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -7,14 +10,11 @@ import {
   appointmentsAPI,
   departmentsAPI,
 } from "../services/api";
-
-const NAV = [
-  { key: "book", icon: "📋", label: "Book Appointment" },
-  { key: "myappointments", icon: "📅", label: "My Appointments" },
-];
+import { useLanguage, LanguageSwitcher } from "../context/LanguageSwitcher";
 
 export default function PatientDashboard() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   const [activeTab, setActiveTab] = useState("book");
@@ -35,6 +35,12 @@ export default function PatientDashboard() {
   const [booking, setBooking] = useState(false);
   const [receipt, setReceipt] = useState(null);
 
+  // NAV uses t() so it updates when language changes
+  const NAV = [
+    { key: "book", icon: "📋", label: t("bookAppointmentTab") },
+    { key: "myappointments", icon: "📅", label: t("myAppointments") },
+  ];
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -49,10 +55,8 @@ export default function PatientDashboard() {
       ]);
       setDoctors(docRes.data || []);
       setDepartments(deptRes.data || []);
-
       const me = patRes.data || null;
       setMyPatient(me);
-
       if (me) {
         const apptRes = await appointmentsAPI.getAll();
         setMyAppointments(apptRes.data || []);
@@ -69,13 +73,11 @@ export default function PatientDashboard() {
     navigate("/login");
   };
 
-  // Filter doctors by selected department
   const filteredDoctors =
     selectedDept === "all"
       ? doctors
       : doctors.filter(
-          (d) =>
-            (d.department?._id || d.department) === selectedDept,
+          (d) => (d.department?._id || d.department) === selectedDept,
         );
 
   const selectedDoctor = doctors.find((d) => d._id === bookForm.doctorId);
@@ -130,6 +132,7 @@ export default function PatientDashboard() {
 
   return (
     <div style={s.shell}>
+      {/* ── Sidebar ── */}
       <aside style={s.sidebar}>
         <div style={s.logo}>
           <span style={s.logoIcon}>✚</span>
@@ -147,6 +150,10 @@ export default function PatientDashboard() {
           ))}
         </nav>
         <div style={s.sideFooter}>
+          {/* Language switcher in sidebar */}
+          <div style={{ marginBottom: 12 }}>
+            <LanguageSwitcher style={{ width: "100%" }} />
+          </div>
           <div style={s.userBadge}>
             <div style={s.avatar}>{(user.name || "P")[0].toUpperCase()}</div>
             <div>
@@ -155,16 +162,19 @@ export default function PatientDashboard() {
             </div>
           </div>
           <button style={s.logoutBtn} onClick={handleLogout}>
-            ↩ Logout
+            ↩ {t("logout")}
           </button>
         </div>
       </aside>
 
+      {/* ── Main ── */}
       <main style={s.main}>
         <div style={s.header}>
           <div>
             <h1 style={s.pageTitle}>
-              {activeTab === "book" ? "Book Appointment" : "My Appointments"}
+              {activeTab === "book"
+                ? t("bookAppointmentTab")
+                : t("myAppointments")}
             </h1>
             <p style={s.pageDate}>{new Date().toDateString()}</p>
           </div>
@@ -174,22 +184,24 @@ export default function PatientDashboard() {
           <div style={s.loader}>Loading…</div>
         ) : (
           <>
+            {/* ── BOOK TAB ── */}
             {activeTab === "book" && (
               <div style={s.bookGrid}>
                 {/* Left: Form */}
                 <div style={s.bookCard}>
-                  <h2 style={s.cardTitle}>New Appointment</h2>
+                  <h2 style={s.cardTitle}>{t("newAppointment")}</h2>
 
                   {bookError && <div style={s.errorBox}>⚠ {bookError}</div>}
                   {!myPatient && (
                     <div style={s.warnBox}>
-                      ⚠ Patient profile not found. Please logout and register again.
+                      ⚠ Patient profile not found. Please logout and register
+                      again.
                     </div>
                   )}
 
                   <form onSubmit={handleBook} style={s.form}>
                     <div style={s.fieldGroup}>
-                      <label style={s.label}>Select Doctor *</label>
+                      <label style={s.label}>{t("selectDoctor")} *</label>
                       <select
                         style={s.select}
                         value={bookForm.doctorId}
@@ -197,11 +209,13 @@ export default function PatientDashboard() {
                           setBookForm({ ...bookForm, doctorId: e.target.value })
                         }
                       >
-                        <option value="">— Choose a Doctor —</option>
+                        <option value="">{t("chooseDoctor")}</option>
                         {doctors.map((d) => (
                           <option key={d._id} value={d._id}>
                             {d.name} —{" "}
-                            {d.department?.name || d.specialization || "General"}{" "}
+                            {d.department?.name ||
+                              d.specialization ||
+                              "General"}{" "}
                             (₹{d.fee || 500})
                           </option>
                         ))}
@@ -210,7 +224,9 @@ export default function PatientDashboard() {
 
                     {selectedDoctor && (
                       <div style={s.doctorPreview}>
-                        <div style={s.doctorAvatar}>{selectedDoctor.name[0]}</div>
+                        <div style={s.doctorAvatar}>
+                          {selectedDoctor.name[0]}
+                        </div>
                         <div>
                           <div style={{ fontWeight: 700 }}>
                             {selectedDoctor.name}
@@ -236,7 +252,7 @@ export default function PatientDashboard() {
 
                     <div style={s.row}>
                       <div style={s.fieldGroup}>
-                        <label style={s.label}>Date *</label>
+                        <label style={s.label}>{t("date")} *</label>
                         <input
                           type="date"
                           style={s.input}
@@ -248,7 +264,7 @@ export default function PatientDashboard() {
                         />
                       </div>
                       <div style={s.fieldGroup}>
-                        <label style={s.label}>Time *</label>
+                        <label style={s.label}>{t("time")} *</label>
                         <input
                           type="time"
                           style={s.input}
@@ -261,10 +277,10 @@ export default function PatientDashboard() {
                     </div>
 
                     <div style={s.fieldGroup}>
-                      <label style={s.label}>Notes (Optional)</label>
+                      <label style={s.label}>{t("notes")}</label>
                       <textarea
                         style={{ ...s.input, height: 80, resize: "vertical" }}
-                        placeholder="Describe your symptoms..."
+                        placeholder={t("notesPlaceholder")}
                         value={bookForm.notes}
                         onChange={(e) =>
                           setBookForm({ ...bookForm, notes: e.target.value })
@@ -273,12 +289,12 @@ export default function PatientDashboard() {
                     </div>
 
                     <button type="submit" style={s.bookBtn} disabled={booking}>
-                      {booking ? "Booking…" : "📅 Book Appointment"}
+                      {booking ? t("booking") : t("bookingBtn")}
                     </button>
                   </form>
                 </div>
 
-                {/* Right: Doctor list with department filter */}
+                {/* Right: Doctor list */}
                 <div>
                   <h3
                     style={{
@@ -288,10 +304,8 @@ export default function PatientDashboard() {
                       color: "#0f172a",
                     }}
                   >
-                    Available Doctors
+                    {t("availableDoctors")}
                   </h3>
-
-                  {/* Department Filter Tabs */}
                   <div style={s.deptTabs}>
                     <button
                       style={{
@@ -304,8 +318,7 @@ export default function PatientDashboard() {
                     </button>
                     {departments.map((dept) => {
                       const count = doctors.filter(
-                        (d) =>
-                          (d.department?._id || d.department) === dept._id,
+                        (d) => (d.department?._id || d.department) === dept._id,
                       ).length;
                       if (count === 0) return null;
                       return (
@@ -376,30 +389,36 @@ export default function PatientDashboard() {
               </div>
             )}
 
+            {/* ── MY APPOINTMENTS TAB ── */}
             {activeTab === "myappointments" && (
               <div style={s.tableWrap}>
                 <table style={s.table}>
                   <thead>
                     <tr>
-                      {["Doctor", "Department", "Date", "Time", "Fee", "Status"].map(
-                        (c) => (
-                          <th key={c} style={s.th}>
-                            {c}
-                          </th>
-                        ),
-                      )}
+                      {[
+                        "Doctor",
+                        "Department",
+                        "Date",
+                        "Time",
+                        "Fee",
+                        "Status",
+                      ].map((c) => (
+                        <th key={c} style={s.th}>
+                          {c}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
                     {myAppointments.length === 0 ? (
                       <tr>
                         <td colSpan={6} style={s.emptyCell}>
-                          No appointments yet.{" "}
+                          {t("noAppointmentsYet")}{" "}
                           <span
                             style={{ color: "#0ea5e9", cursor: "pointer" }}
                             onClick={() => setActiveTab("book")}
                           >
-                            Book now →
+                            {t("bookNow") || "Book now →"}
                           </span>
                         </td>
                       </tr>
@@ -436,20 +455,27 @@ export default function PatientDashboard() {
         )}
       </main>
 
-      {/* Receipt Modal */}
+      {/* ── Receipt Modal ── */}
       {receipt && (
         <div style={s.overlay} onClick={() => setReceipt(null)}>
           <div style={s.receiptModal} onClick={(e) => e.stopPropagation()}>
             <div style={{ textAlign: "center", marginBottom: 24 }}>
               <div style={{ fontSize: 48 }}>🎉</div>
-              <h2 style={{ margin: "8px 0 4px", fontSize: 22, fontWeight: 800 }}>
+              <h2
+                style={{ margin: "8px 0 4px", fontSize: 22, fontWeight: 800 }}
+              >
                 Appointment Booked!
               </h2>
-              <p style={{ color: "#64748b", fontSize: 14 }}>Confirmation Receipt</p>
+              <p style={{ color: "#64748b", fontSize: 14 }}>
+                Confirmation Receipt
+              </p>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {[
-                ["Appointment ID", `#${receipt.appointmentId?.slice(-8).toUpperCase()}`],
+                [
+                  "Appointment ID",
+                  `#${receipt.appointmentId?.slice(-8).toUpperCase()}`,
+                ],
                 ["Patient", receipt.patientName],
                 ["Doctor", receipt.doctorName],
                 ["Department", receipt.department],
@@ -487,7 +513,9 @@ export default function PatientDashboard() {
                 }}
               >
                 <span style={{ fontWeight: 700 }}>Consultation Fee</span>
-                <span style={{ color: "#10b981", fontWeight: 800, fontSize: 18 }}>
+                <span
+                  style={{ color: "#10b981", fontWeight: 800, fontSize: 18 }}
+                >
                   ₹{receipt.fee}
                 </span>
               </div>
@@ -506,7 +534,10 @@ export default function PatientDashboard() {
               📩 Please arrive 10 minutes early.
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-              <button style={s.receiptCloseBtn} onClick={() => setReceipt(null)}>
+              <button
+                style={s.receiptCloseBtn}
+                onClick={() => setReceipt(null)}
+              >
                 Close
               </button>
               <button
@@ -655,7 +686,12 @@ const s = {
     padding: 32,
     boxShadow: "0 1px 6px rgba(0,0,0,0.07)",
   },
-  cardTitle: { margin: "0 0 24px", fontSize: 20, fontWeight: 800, color: "#0f172a" },
+  cardTitle: {
+    margin: "0 0 24px",
+    fontSize: 20,
+    fontWeight: 800,
+    color: "#0f172a",
+  },
   form: { display: "flex", flexDirection: "column", gap: 18 },
   fieldGroup: { display: "flex", flexDirection: "column", gap: 6 },
   label: { fontSize: 13, fontWeight: 600, color: "#374151" },
@@ -707,13 +743,7 @@ const s = {
     fontSize: 15,
     cursor: "pointer",
   },
-  // Department filter tabs
-  deptTabs: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 6,
-    marginBottom: 14,
-  },
+  deptTabs: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 },
   deptTab: {
     padding: "6px 12px",
     borderRadius: 20,
@@ -748,7 +778,10 @@ const s = {
     background: "#fff",
     cursor: "pointer",
   },
-  doctorListCardActive: { border: "1.5px solid #0ea5e9", background: "#f0f9ff" },
+  doctorListCardActive: {
+    border: "1.5px solid #0ea5e9",
+    background: "#f0f9ff",
+  },
   docAvatar: {
     width: 40,
     height: 40,
@@ -786,7 +819,12 @@ const s = {
   },
   rowEven: { background: "#fff" },
   rowOdd: { background: "#fafafa" },
-  emptyCell: { padding: "48px", textAlign: "center", color: "#94a3b8", fontSize: 14 },
+  emptyCell: {
+    padding: "48px",
+    textAlign: "center",
+    color: "#94a3b8",
+    fontSize: 14,
+  },
   errorBox: {
     background: "#fee2e2",
     color: "#991b1b",
