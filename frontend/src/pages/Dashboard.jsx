@@ -60,6 +60,7 @@ export default function Dashboard() {
   const [formData, setFormData] = useState({});
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
+  const [defaultPasswordMsg, setDefaultPasswordMsg] = useState(""); // ✅ NEW
 
   useEffect(() => {
     fetchAll();
@@ -101,6 +102,7 @@ export default function Dashboard() {
             : APPT_INIT;
     setFormData(init);
     setFormError("");
+    setDefaultPasswordMsg(""); // ✅ NEW
     setModal({ type, mode: "add" });
   };
 
@@ -115,6 +117,7 @@ export default function Dashboard() {
     }
     setFormData(editData);
     setFormError("");
+    setDefaultPasswordMsg(""); // ✅ NEW
     setModal({ type, mode: "edit" });
   };
 
@@ -122,6 +125,7 @@ export default function Dashboard() {
     setModal(null);
     setFormData({});
     setFormError("");
+    setDefaultPasswordMsg(""); // ✅ NEW
   };
 
   const handleSave = async () => {
@@ -153,7 +157,16 @@ export default function Dashboard() {
         }
 
         if (mode === "add") {
-          await api.create(payload);
+          const res = await api.create(payload);
+          // ✅ Doctor add hone pe default password dikhao
+          if (type === "doctor" && res.data?.defaultPassword) {
+            setDefaultPasswordMsg(
+              `✅ Doctor added! Default Login Password: ${res.data.defaultPassword}`,
+            );
+            await fetchAll();
+            setSaving(false);
+            return; // Modal band mat karo — password dikhao
+          }
         } else {
           await api.update(payload._id, payload);
         }
@@ -227,10 +240,8 @@ export default function Dashboard() {
 
   // Doctor count per department
   const doctorCountByDept = (deptId) =>
-    doctors.filter(
-      (d) =>
-        (d.department?._id || d.department) === deptId,
-    ).length;
+    doctors.filter((d) => (d.department?._id || d.department) === deptId)
+      .length;
 
   return (
     <div style={s.shell}>
@@ -321,14 +332,22 @@ export default function Dashboard() {
                 </div>
                 <h2 style={s.sectionTitle}>Recent Appointments</h2>
                 <Table
-                  columns={["Patient", "Doctor", "Department", "Date", "Status"]}
-                  rows={appointments.slice(0, 6).map((a) => [
-                    a.patient?.name || "—",
-                    a.doctor?.name || "—",
-                    a.doctor?.department?.name || "—",
-                    a.date ? new Date(a.date).toLocaleDateString() : "—",
-                    <StatusBadge key={a._id} status={a.status} />,
-                  ])}
+                  columns={[
+                    "Patient",
+                    "Doctor",
+                    "Department",
+                    "Date",
+                    "Status",
+                  ]}
+                  rows={appointments
+                    .slice(0, 6)
+                    .map((a) => [
+                      a.patient?.name || "—",
+                      a.doctor?.name || "—",
+                      a.doctor?.department?.name || "—",
+                      a.date ? new Date(a.date).toLocaleDateString() : "—",
+                      <StatusBadge key={a._id} status={a.status} />,
+                    ])}
                   empty="No appointments found"
                 />
               </div>
@@ -339,7 +358,8 @@ export default function Dashboard() {
               <div style={s.deptGrid}>
                 {departments.length === 0 ? (
                   <div style={s.emptyState}>
-                    No departments found. Click &quot;Add Department&quot; to create one.
+                    No departments found. Click &quot;Add Department&quot; to
+                    create one.
                   </div>
                 ) : (
                   departments.map((dept) => {
@@ -388,49 +408,55 @@ export default function Dashboard() {
             {/* DOCTORS — grouped by department */}
             {activeTab === "doctors" && (
               <div>
-                {departments.length > 0 ? (
-                  departments.map((dept) => {
-                    const deptDoctors = doctors.filter(
-                      (d) =>
-                        (d.department?._id || d.department) === dept._id,
-                    );
-                    if (deptDoctors.length === 0) return null;
-                    return (
-                      <div key={dept._id} style={{ marginBottom: 32 }}>
-                        <div style={s.deptGroupHeader}>
-                          <span>{dept.icon}</span>
-                          <span>{dept.name}</span>
-                          <span style={s.deptGroupCount}>
-                            {deptDoctors.length} doctor
-                            {deptDoctors.length !== 1 ? "s" : ""}
-                          </span>
+                {departments.length > 0
+                  ? departments.map((dept) => {
+                      const deptDoctors = doctors.filter(
+                        (d) => (d.department?._id || d.department) === dept._id,
+                      );
+                      if (deptDoctors.length === 0) return null;
+                      return (
+                        <div key={dept._id} style={{ marginBottom: 32 }}>
+                          <div style={s.deptGroupHeader}>
+                            <span>{dept.icon}</span>
+                            <span>{dept.name}</span>
+                            <span style={s.deptGroupCount}>
+                              {deptDoctors.length} doctor
+                              {deptDoctors.length !== 1 ? "s" : ""}
+                            </span>
+                          </div>
+                          <Table
+                            columns={[
+                              "Name",
+                              "Specialization",
+                              "Email",
+                              "Phone",
+                              "Fee",
+                              "Actions",
+                            ]}
+                            rows={deptDoctors.map((d) => [
+                              d.name,
+                              d.specialization || "—",
+                              d.email || "—",
+                              d.phone || "—",
+                              d.fee ? `₹${d.fee}` : "—",
+                              <ActionBtns
+                                key={d._id}
+                                onEdit={() => openEdit("doctor", d)}
+                                onDelete={() =>
+                                  setDeleteConfirm({
+                                    type: "doctor",
+                                    id: d._id,
+                                    name: d.name,
+                                  })
+                                }
+                              />,
+                            ])}
+                            empty=""
+                          />
                         </div>
-                        <Table
-                          columns={["Name", "Specialization", "Email", "Phone", "Fee", "Actions"]}
-                          rows={deptDoctors.map((d) => [
-                            d.name,
-                            d.specialization || "—",
-                            d.email || "—",
-                            d.phone || "—",
-                            d.fee ? `₹${d.fee}` : "—",
-                            <ActionBtns
-                              key={d._id}
-                              onEdit={() => openEdit("doctor", d)}
-                              onDelete={() =>
-                                setDeleteConfirm({
-                                  type: "doctor",
-                                  id: d._id,
-                                  name: d.name,
-                                })
-                              }
-                            />,
-                          ])}
-                          empty=""
-                        />
-                      </div>
-                    );
-                  })
-                ) : null}
+                      );
+                    })
+                  : null}
                 {/* Doctors with no department */}
                 {(() => {
                   const unassigned = doctors.filter((d) => !d.department);
@@ -441,11 +467,19 @@ export default function Dashboard() {
                         <span>📋</span>
                         <span>Unassigned</span>
                         <span style={s.deptGroupCount}>
-                          {unassigned.length} doctor{unassigned.length !== 1 ? "s" : ""}
+                          {unassigned.length} doctor
+                          {unassigned.length !== 1 ? "s" : ""}
                         </span>
                       </div>
                       <Table
-                        columns={["Name", "Specialization", "Email", "Phone", "Fee", "Actions"]}
+                        columns={[
+                          "Name",
+                          "Specialization",
+                          "Email",
+                          "Phone",
+                          "Fee",
+                          "Actions",
+                        ]}
                         rows={unassigned.map((d) => [
                           d.name,
                           d.specialization || "—",
@@ -471,7 +505,8 @@ export default function Dashboard() {
                 })()}
                 {doctors.length === 0 && (
                   <div style={s.loader}>
-                    No doctors found. Click &quot;Add Doctor&quot; to get started.
+                    No doctors found. Click &quot;Add Doctor&quot; to get
+                    started.
                   </div>
                 )}
               </div>
@@ -506,7 +541,15 @@ export default function Dashboard() {
             {/* APPOINTMENTS */}
             {activeTab === "appointments" && (
               <Table
-                columns={["Patient", "Doctor", "Department", "Date", "Time", "Status", "Actions"]}
+                columns={[
+                  "Patient",
+                  "Doctor",
+                  "Department",
+                  "Date",
+                  "Time",
+                  "Status",
+                  "Actions",
+                ]}
                 rows={appointments.map((a) => [
                   a.patient?.name || "—",
                   a.doctor?.name || "—",
@@ -547,7 +590,21 @@ export default function Dashboard() {
               </button>
             </div>
 
+            {/* ✅ Error message */}
             {formError && <div style={s.errorBox}>⚠ {formError}</div>}
+
+            {/* ✅ Default password success message */}
+            {defaultPasswordMsg && (
+              <div style={s.successBox}>
+                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>
+                  {defaultPasswordMsg}
+                </div>
+                <div style={{ fontSize: 12, color: "#065f46" }}>
+                  ℹ️ Yeh password doctor ko share karo. Woh login karke baad
+                  mein change kar sakta hai.
+                </div>
+              </div>
+            )}
 
             <div style={s.modalBody}>
               {/* Department Form */}
@@ -775,7 +832,9 @@ export default function Dashboard() {
                         {doctors.map((d) => (
                           <option key={d._id} value={d._id}>
                             {d.name} —{" "}
-                            {d.department?.name || d.specialization || "General"}
+                            {d.department?.name ||
+                              d.specialization ||
+                              "General"}
                           </option>
                         ))}
                       </select>
@@ -828,13 +887,24 @@ export default function Dashboard() {
               <button style={s.cancelBtn} onClick={closeModal}>
                 Cancel
               </button>
-              <button style={s.saveBtn} onClick={handleSave} disabled={saving}>
-                {saving
-                  ? "Saving…"
-                  : modal.mode === "add"
-                    ? "Add"
-                    : "Save Changes"}
-              </button>
+              {/* ✅ Doctor add hone ke baad "Close" button dikhao */}
+              {defaultPasswordMsg ? (
+                <button style={s.saveBtn} onClick={closeModal}>
+                  Close
+                </button>
+              ) : (
+                <button
+                  style={s.saveBtn}
+                  onClick={handleSave}
+                  disabled={saving}
+                >
+                  {saving
+                    ? "Saving…"
+                    : modal.mode === "add"
+                      ? "Add"
+                      : "Save Changes"}
+                </button>
+              )}
             </div>
           </div>
         </Overlay>
@@ -925,7 +995,14 @@ function FormRow({ children }) {
   );
 }
 
-function FormField({ label, name, type = "text", value, onChange, placeholder }) {
+function FormField({
+  label,
+  name,
+  type = "text",
+  value,
+  onChange,
+  placeholder,
+}) {
   return (
     <div style={s.fieldGroup}>
       <label style={s.label}>{label}</label>
@@ -987,7 +1064,10 @@ function StatusBadge({ status }) {
     cancelled: { bg: "#fee2e2", color: "#991b1b" },
     completed: { bg: "#dbeafe", color: "#1e40af" },
   };
-  const style = map[status?.toLowerCase()] || { bg: "#f1f5f9", color: "#475569" };
+  const style = map[status?.toLowerCase()] || {
+    bg: "#f1f5f9",
+    color: "#475569",
+  };
   return (
     <span
       style={{
@@ -1043,7 +1123,12 @@ const s = {
     fontWeight: "bold",
     color: "#fff",
   },
-  logoText: { color: "#fff", fontSize: 18, fontWeight: 700, letterSpacing: "-0.3px" },
+  logoText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: 700,
+    letterSpacing: "-0.3px",
+  },
   nav: { display: "flex", flexDirection: "column", gap: 4, flex: 1 },
   navBtn: {
     display: "flex",
@@ -1101,7 +1186,13 @@ const s = {
     alignItems: "flex-start",
     marginBottom: 32,
   },
-  pageTitle: { margin: 0, fontSize: 26, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.5px" },
+  pageTitle: {
+    margin: 0,
+    fontSize: 26,
+    fontWeight: 800,
+    color: "#0f172a",
+    letterSpacing: "-0.5px",
+  },
   pageDate: { color: "#94a3b8", fontSize: 13, margin: "4px 0 0" },
   refreshBtn: {
     padding: "9px 18px",
@@ -1124,7 +1215,12 @@ const s = {
     cursor: "pointer",
   },
   loader: { textAlign: "center", padding: 80, color: "#94a3b8", fontSize: 16 },
-  emptyState: { textAlign: "center", padding: 60, color: "#94a3b8", fontSize: 15 },
+  emptyState: {
+    textAlign: "center",
+    padding: 60,
+    color: "#94a3b8",
+    fontSize: 15,
+  },
   statGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(4, 1fr)",
@@ -1140,8 +1236,12 @@ const s = {
   statIcon: { fontSize: 26, marginBottom: 10 },
   statVal: { fontSize: 36, fontWeight: 800, lineHeight: 1 },
   statLabel: { color: "#64748b", fontSize: 13, marginTop: 4 },
-  sectionTitle: { fontSize: 17, fontWeight: 700, color: "#0f172a", marginBottom: 16 },
-  // Department cards
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: 700,
+    color: "#0f172a",
+    marginBottom: 16,
+  },
   deptGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
@@ -1168,7 +1268,12 @@ const s = {
     justifyContent: "center",
   },
   deptInfo: { flex: 1 },
-  deptName: { fontSize: 16, fontWeight: 700, color: "#0f172a", marginBottom: 4 },
+  deptName: {
+    fontSize: 16,
+    fontWeight: 700,
+    color: "#0f172a",
+    marginBottom: 4,
+  },
   deptDesc: { fontSize: 13, color: "#64748b", marginBottom: 8 },
   deptCount: {},
   deptCountBadge: {
@@ -1226,7 +1331,12 @@ const s = {
   },
   rowEven: { background: "#fff" },
   rowOdd: { background: "#fafafa" },
-  emptyCell: { padding: "48px", textAlign: "center", color: "#94a3b8", fontSize: 14 },
+  emptyCell: {
+    padding: "48px",
+    textAlign: "center",
+    color: "#94a3b8",
+    fontSize: 14,
+  },
   editBtn: {
     padding: "5px 12px",
     borderRadius: 6,
@@ -1303,6 +1413,16 @@ const s = {
     borderRadius: 8,
     fontSize: 13,
     fontWeight: 500,
+  },
+  // ✅ NEW - Success box for default password
+  successBox: {
+    margin: "12px 24px 0",
+    background: "#d1fae5",
+    color: "#065f46",
+    padding: "14px 16px",
+    borderRadius: 10,
+    fontSize: 13,
+    border: "1.5px solid #6ee7b7",
   },
   fieldGroup: { display: "flex", flexDirection: "column", gap: 6 },
   label: { fontSize: 13, fontWeight: 600, color: "#374151" },

@@ -6,6 +6,11 @@ const doctorSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
     department: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Department",
