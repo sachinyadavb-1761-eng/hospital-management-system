@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { authAPI, appointmentsAPI, doctorsAPI } from "../services/api";
+import { getUser } from "../utils/auth";
 
 const NAV = [
   { key: "appointments", icon: "📅", label: "My Appointments" },
@@ -10,7 +11,7 @@ const NAV = [
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const user = getUser() || {};
 
   const [activeTab, setActiveTab] = useState("appointments");
   const [appointments, setAppointments] = useState([]);
@@ -78,7 +79,12 @@ export default function DoctorDashboard() {
   );
 
   const stats = [
-    { label: "Total", value: appointments.length, color: "#1a73e8", icon: "📋" },
+    {
+      label: "Total",
+      value: appointments.length,
+      color: "#1a73e8",
+      icon: "📋",
+    },
     { label: "Today", value: todayAppts.length, color: "#10b981", icon: "📆" },
     {
       label: "Pending",
@@ -122,9 +128,7 @@ export default function DoctorDashboard() {
               </span>
               <div>
                 <div style={s.deptBadgeLabel}>Department</div>
-                <div style={s.deptBadgeName}>
-                  {myProfile.department.name}
-                </div>
+                <div style={s.deptBadgeName}>{myProfile.department.name}</div>
               </div>
             </div>
           )}
@@ -187,13 +191,18 @@ export default function DoctorDashboard() {
                 <table style={s.table}>
                   <thead>
                     <tr>
-                      {["Patient", "Date", "Time", "Status", "Notes", "Actions"].map(
-                        (c) => (
-                          <th key={c} style={s.th}>
-                            {c}
-                          </th>
-                        ),
-                      )}
+                      {[
+                        "Patient",
+                        "Date",
+                        "Time",
+                        "Status",
+                        "Notes",
+                        "Actions",
+                      ].map((c) => (
+                        <th key={c} style={s.th}>
+                          {c}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
@@ -234,7 +243,13 @@ export default function DoctorDashboard() {
                             </span>
                           </td>
                           <td style={s.td}>
-                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: 6,
+                                flexWrap: "wrap",
+                              }}
+                            >
                               {a.status !== "completed" && (
                                 <button
                                   style={s.completeBtn}
@@ -384,7 +399,10 @@ function StatusBadge({ status }) {
     cancelled: { bg: "#fee2e2", color: "#991b1b" },
     completed: { bg: "#dbeafe", color: "#1e40af" },
   };
-  const style = map[status?.toLowerCase()] || { bg: "#f1f5f9", color: "#475569" };
+  const style = map[status?.toLowerCase()] || {
+    bg: "#f1f5f9",
+    color: "#475569",
+  };
   return (
     <span
       style={{
@@ -561,7 +579,12 @@ const s = {
   },
   rowEven: { background: "#fff" },
   rowOdd: { background: "#fafafa" },
-  emptyCell: { padding: "48px", textAlign: "center", color: "#94a3b8", fontSize: 14 },
+  emptyCell: {
+    padding: "48px",
+    textAlign: "center",
+    color: "#94a3b8",
+    fontSize: 14,
+  },
   completeBtn: {
     padding: "4px 10px",
     borderRadius: 6,
@@ -693,7 +716,12 @@ const s = {
     flexShrink: 0,
   },
   colleagueInfo: { flex: 1 },
-  colleagueName: { fontSize: 15, fontWeight: 700, color: "#0f172a", marginBottom: 2 },
+  colleagueName: {
+    fontSize: 15,
+    fontWeight: 700,
+    color: "#0f172a",
+    marginBottom: 2,
+  },
   colleagueSpec: { fontSize: 13, color: "#64748b", marginBottom: 4 },
   colleagueMeta: { fontSize: 12, color: "#94a3b8" },
   overlay: {

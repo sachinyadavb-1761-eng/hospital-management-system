@@ -111,7 +111,7 @@ export default function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute roles={["admin"]}>
+              <ProtectedRoute roles={["superadmin", "departmentadmin"]}>
                 <Dashboard />
               </ProtectedRoute>
             }
@@ -120,7 +120,7 @@ export default function App() {
           <Route
             path="/admin/doctors"
             element={
-              <ProtectedRoute roles={["admin"]}>
+              <ProtectedRoute roles={["superadmin", "departmentadmin"]}>
                 <Dashboard />
               </ProtectedRoute>
             }
@@ -128,7 +128,7 @@ export default function App() {
           <Route
             path="/admin/patients"
             element={
-              <ProtectedRoute roles={["admin"]}>
+              <ProtectedRoute roles={["superadmin", "departmentadmin"]}>
                 <Dashboard />
               </ProtectedRoute>
             }
@@ -136,7 +136,7 @@ export default function App() {
           <Route
             path="/admin/appointments"
             element={
-              <ProtectedRoute roles={["admin"]}>
+              <ProtectedRoute roles={["superadmin", "departmentadmin"]}>
                 <Dashboard />
               </ProtectedRoute>
             }
@@ -144,7 +144,7 @@ export default function App() {
           <Route
             path="/admin/departments"
             element={
-              <ProtectedRoute roles={["admin"]}>
+              <ProtectedRoute roles={["superadmin", "departmentadmin"]}>
                 <Dashboard />
               </ProtectedRoute>
             }

@@ -11,11 +11,12 @@ import {
   departmentsAPI,
 } from "../services/api";
 import { useLanguage, LanguageSwitcher } from "../context/LanguageSwitcher";
+import { getUser } from "../utils/auth";
 
 export default function PatientDashboard() {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const user = getUser() || {};
 
   const [activeTab, setActiveTab] = useState("book");
   const [doctors, setDoctors] = useState([]);

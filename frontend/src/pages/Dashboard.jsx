@@ -7,6 +7,7 @@ import {
   appointmentsAPI,
   departmentsAPI,
 } from "../services/api";
+import { getUser } from "../utils/auth";
 
 const NAV = [
   { key: "overview", icon: "⊞", label: "Overview" },
@@ -46,7 +47,7 @@ const APPT_INIT = {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const user = getUser() || {};
 
   const [activeTab, setActiveTab] = useState("overview");
   const [doctors, setDoctors] = useState([]);

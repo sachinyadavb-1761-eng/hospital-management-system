@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authAPI } from "../services/api";
 import { useLanguage, LanguageSwitcher } from "../context/LanguageSwitcher";
+import { clearAuthData, setAuthData } from "../utils/auth";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -26,8 +27,7 @@ export default function Login() {
     try {
       const res = await authAPI.login(form);
       const { token, user } = res.data;
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
+      setAuthData(token, user);
 
       if (user.role !== "patient") {
         setError(
@@ -35,8 +35,7 @@ export default function Login() {
             ? "Doctors must use the Doctor Login page."
             : "Admins must use the Admin Login page.",
         );
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+        clearAuthData();
         return;
       }
       navigate("/patient/dashboard");

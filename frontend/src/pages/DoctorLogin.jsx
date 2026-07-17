@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { authAPI, departmentsAPI } from "../services/api";
 import { useLanguage, LanguageSwitcher } from "../context/LanguageSwitcher";
+import { setAuthData } from "../utils/auth";
 
 export default function DoctorLogin() {
   const navigate = useNavigate();
@@ -52,8 +53,7 @@ export default function DoctorLogin() {
           password: form.password,
         });
         const { token, user } = res.data;
-        localStorage.setItem("token", token);
-        localStorage.setItem("user", JSON.stringify(user));
+        setAuthData(token, user);
         navigate("/doctor-dashboard");
       } else {
         await authAPI.register(form);

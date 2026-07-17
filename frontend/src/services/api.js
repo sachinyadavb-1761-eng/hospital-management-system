@@ -1,4 +1,5 @@
 import axios from "axios";
+import { clearAuthData, getToken } from "../utils/auth";
 
 const BASE_URL = "https://hospital-management-system-wlog.onrender.com/api";
 
@@ -10,7 +11,7 @@ const api = axios.create({
 // ─── Request Interceptor: JWT token attach ────────────────────────────────────
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
+    const token = getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -24,8 +25,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      clearAuthData();
       window.location.href = "/login";
     }
     return Promise.reject(error);
@@ -36,13 +36,13 @@ api.interceptors.response.use(
 // AUTH
 // ══════════════════════════════════════════════════════════════
 export const authAPI = {
-  login: (credentials) => api.post("/auth/login", credentials),          // patient
+  login: (credentials) => api.post("/auth/login", credentials), // patient
   loginDoctor: (credentials) => api.post("/auth/doctor-login", credentials), // doctor
-  loginAdmin: (credentials) => api.post("/auth/admin-login", credentials),   // admin
+  loginStaff: (credentials) => api.post("/auth/staff-login", credentials), // receptionist
+  loginAdmin: (credentials) => api.post("/auth/admin-login", credentials), // superadmin + dept admin
   register: (userData) => api.post("/auth/register", userData),
   logout: () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    clearAuthData();
   },
 };
 

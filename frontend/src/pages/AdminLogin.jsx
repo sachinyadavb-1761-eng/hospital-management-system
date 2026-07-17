@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authAPI } from "../services/api";
 import { useLanguage, LanguageSwitcher } from "../context/LanguageSwitcher";
+import { setAuthData } from "../utils/auth";
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -29,8 +30,7 @@ export default function AdminLogin() {
     try {
       const res = await authAPI.loginAdmin(form);
       const { token, user } = res.data;
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
+      setAuthData(token, user);
       navigate("/admin");
     } catch (err) {
       setError(err.response?.data?.message || t("loginFailed"));
