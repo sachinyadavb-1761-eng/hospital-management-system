@@ -6,22 +6,28 @@ const departmentSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      trim: true,
     },
     description: {
       type: String,
       default: "",
     },
-    icon: {
-      type: String,
-      default: "🏥",
+    // Department Admin (User with role: departmentadmin)
+    admin: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
-    isActive: {
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    isDeleted: {
       type: Boolean,
-      default: true,
+      default: false,
     },
   },
   { timestamps: true },
 );
 
-export default mongoose.model("Department", departmentSchema);
+const Department = mongoose.model("Department", departmentSchema);
+export default Department;
