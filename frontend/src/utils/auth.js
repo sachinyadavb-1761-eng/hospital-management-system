@@ -7,21 +7,23 @@ function decodeToken(token) {
   }
 }
 
+// ✅ FIX: sirf sessionStorage use karo — ye har browser TAB ke liye ISOLATED hai.
+// Pehle localStorage bhi use ho raha tha, jo saare tabs mein SHARED hota hai
+// (same origin) — isi wajah se ek tab mein doctor login karne par
+// dusre tab ka user session overwrite/logout ho raha tha.
 function readStoredValue(key) {
   if (typeof window === "undefined") return null;
-  return sessionStorage.getItem(key) ?? localStorage.getItem(key) ?? null;
+  return sessionStorage.getItem(key);
 }
 
 function writeStoredValue(key, value) {
   if (typeof window === "undefined") return;
   sessionStorage.setItem(key, value);
-  localStorage.setItem(key, value);
 }
 
 function removeStoredValue(key) {
   if (typeof window === "undefined") return;
   sessionStorage.removeItem(key);
-  localStorage.removeItem(key);
 }
 
 export function setAuthData(token, user) {
