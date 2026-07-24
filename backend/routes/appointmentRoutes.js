@@ -11,25 +11,35 @@ import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// ✅ Analytics route (admin only)
-router.get("/analytics", protect, authorizeRoles("admin"), getAnalytics);
+// ✅ Analytics route (superadmin, departmentadmin)
+router.get(
+  "/analytics",
+  protect,
+  authorizeRoles("superadmin", "departmentadmin"),
+  getAnalytics,
+);
 
 // ✅ Patient/Doctor/Admin — appointment book kar sakte hain
 router.post("/", protect, createAppointment);
 
-// ✅ Admin: saare | Doctor: ?doctorId=xxx | Patient: ?patientId=xxx
+// ✅ Superadmin/departmentadmin: saare | Doctor: ?doctorId=xxx | Patient: ?patientId=xxx
 router.get("/", protect, getAllAppointments);
 router.get("/:id", protect, getAppointmentById);
 
-// ✅ Admin aur Doctor dono update kar sakte hain (status change etc.)
+// ✅ Superadmin, departmentadmin aur doctor teeno update kar sakte hain (status change etc.)
 router.put(
   "/:id",
   protect,
-  authorizeRoles("admin", "doctor"),
+  authorizeRoles("superadmin", "departmentadmin", "doctor"),
   updateAppointment,
 );
 
-// ✅ Sirf admin delete kar sakta hai
-router.delete("/:id", protect, authorizeRoles("admin"), deleteAppointment);
+// ✅ Sirf superadmin aur departmentadmin delete kar sakte hain
+router.delete(
+  "/:id",
+  protect,
+  authorizeRoles("superadmin", "departmentadmin"),
+  deleteAppointment,
+);
 
 export default router;

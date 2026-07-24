@@ -19,9 +19,24 @@ router.get("/profile", protect, authorizeRoles("doctor"), getDoctorProfile);
 
 router.get("/:id", getDoctorById);
 
-// ✅ Sirf admin add/edit/delete kar sakta hai
-router.post("/", protect, authorizeRoles("admin"), createDoctor);
-router.put("/:id", protect, authorizeRoles("admin"), updateDoctor);
-router.delete("/:id", protect, authorizeRoles("admin"), deleteDoctor);
+// ✅ Superadmin aur departmentadmin dono doctor add/edit/delete kar sakte hain
+router.post(
+  "/",
+  protect,
+  authorizeRoles("superadmin", "departmentadmin"),
+  createDoctor,
+);
+router.put(
+  "/:id",
+  protect,
+  authorizeRoles("superadmin", "departmentadmin"),
+  updateDoctor,
+);
+router.delete(
+  "/:id",
+  protect,
+  authorizeRoles("superadmin", "departmentadmin"),
+  deleteDoctor,
+);
 
 export default router;

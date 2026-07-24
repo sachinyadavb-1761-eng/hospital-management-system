@@ -14,14 +14,38 @@ const router = express.Router();
 // Patient apna record dekhe (before /:id to avoid conflict)
 router.get("/me", protect, getMyPatient);
 
-// Admin aur doctor dono patients dekh sakte hain
-router.get("/", protect, authorizeRoles("admin", "doctor"), getAllPatients);
-router.get("/:id", protect, authorizeRoles("admin", "doctor"), getPatientById);
- 
-// Admin aur doctor patient add/edit/delete kar sakte hain
-router.post("/", protect, authorizeRoles("admin", "doctor"), createPatient);
-router.put("/:id", protect, authorizeRoles("admin", "doctor"), updatePatient);
-router.delete("/:id", protect, authorizeRoles("admin", "doctor"), deletePatient);
- 
+// Superadmin, departmentadmin aur doctor dono patients dekh sakte hain
+router.get(
+  "/",
+  protect,
+  authorizeRoles("superadmin", "departmentadmin", "doctor"),
+  getAllPatients,
+);
+router.get(
+  "/:id",
+  protect,
+  authorizeRoles("superadmin", "departmentadmin", "doctor"),
+  getPatientById,
+);
+
+// Superadmin, departmentadmin aur doctor patient add/edit/delete kar sakte hain
+router.post(
+  "/",
+  protect,
+  authorizeRoles("superadmin", "departmentadmin", "doctor"),
+  createPatient,
+);
+router.put(
+  "/:id",
+  protect,
+  authorizeRoles("superadmin", "departmentadmin", "doctor"),
+  updatePatient,
+);
+router.delete(
+  "/:id",
+  protect,
+  authorizeRoles("superadmin", "departmentadmin", "doctor"),
+  deletePatient,
+);
+
 export default router;
- 
