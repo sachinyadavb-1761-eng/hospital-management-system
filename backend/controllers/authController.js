@@ -3,6 +3,8 @@ import Patient from "../models/Patient.js";
 import Doctor from "../models/Doctor.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import sendEmail from "../utils/sendEmail.js";
 
 // ─── Shared: verify credentials and generate token ───────────────────────────
 async function verifyAndSign(email, password) {
@@ -158,5 +160,75 @@ export const loginAdmin = async (req, res) => {
     res.status(200).json({ message: "Admin login successful", token, user });
   } catch (err) {
     res.status(err.status || 500).json({ message: err.message });
+  }
+};
+
+// ─── Forgot Password — POST /api/auth/forgot-password ───────────────────────
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email, isDeleted: false });
+
+    // Security: user exist na kare tab bhi same message do (email enumeration se bachne ke liye)
+    if (!user) {
+      return res.status(200).json({
+        message: "Agar ye email registered hai, to reset link bhej diya gaya hai.",
+      });
+    }
+
+    // Raw token generate karo (ye email mein jayega)
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    // Hashed version DB mein store karo (raw kabhi DB mein nahi rakhte)
+    const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = Date.now() + 15 * 60 * 1000; // 15 minute
+    await user.save();
+
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${rawToken}`;
+
+    await sendEmail(
+      user.email,
+      "Password Reset - HospitalMan",
+      `<p>Namaste ${user.name},</p>
+       <p>Apna password reset karne ke liye niche diye link pe click karo (15 minute valid hai):</p>
+       <a href="${resetUrl}">${resetUrl}</a>
+       <p>Agar ye request tumne nahi ki, to is email ko ignore kar do.</p>`,
+    );
+
+    res.status(200).json({
+      message: "Agar ye email registered hai, to reset link bhej diya gaya hai.",
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ─── Reset Password — PUT /api/auth/reset-password/:token ───────────────────
+export const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { newPassword } = req.body;
+
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() },
+      isDeleted: false,
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Link invalid ya expire ho chuka hai." });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    res.status(200).json({ message: "Password reset ho gaya, ab login kar sakte ho." });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };

@@ -5,6 +5,8 @@ import {
   loginDoctor,
   loginAdmin,
   loginStaff,
+  forgotPassword,
+  resetPassword,
 } from "../controllers/authController.js";
 
 const router = express.Router();
@@ -15,5 +17,8 @@ router.post("/login", loginUser); // Patient only
 router.post("/doctor-login", loginDoctor); // Doctor only
 router.post("/staff-login", loginStaff); // Receptionist only
 router.post("/admin-login", loginAdmin); // Superadmin + Department admin
+
+router.post("/forgot-password", forgotPassword);
+router.put("/reset-password/:token", resetPassword);
 
 export default router;
