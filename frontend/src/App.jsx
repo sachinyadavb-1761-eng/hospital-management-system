@@ -3,6 +3,8 @@ import { LanguageProvider } from "./context/LanguageSwitcher"; // ← ADD THIS
 
 import Home from "./pages/Home";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import DoctorLogin from "./pages/DoctorLogin";
 import AdminLogin from "./pages/AdminLogin";
 import Register from "./pages/Register";
@@ -26,7 +28,9 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
-
+          // ... aur Routes ke andar:
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
           {/* ══════════════════════════════════════════
               DOCTOR & ADMIN — Alag URL pe
           ══════════════════════════════════════════ */}
@@ -40,7 +44,6 @@ export default function App() {
             path="/staff-login"
             element={<Navigate to="/doctor-login" replace />}
           />
-
           {/* ══════════════════════════════════════════
               PATIENT only
           ══════════════════════════════════════════ */}
@@ -72,7 +75,6 @@ export default function App() {
             path="/profile"
             element={<Navigate to="/patient/dashboard" replace />}
           />
-
           {/* ══════════════════════════════════════════
               DOCTOR only
           ══════════════════════════════════════════ */}
@@ -104,7 +106,6 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
           {/* ══════════════════════════════════════════
               ADMIN only
           ══════════════════════════════════════════ */}
@@ -149,7 +150,6 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

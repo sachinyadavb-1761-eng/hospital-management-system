@@ -41,6 +41,9 @@ export const authAPI = {
   loginStaff: (credentials) => api.post("/auth/staff-login", credentials), // receptionist
   loginAdmin: (credentials) => api.post("/auth/admin-login", credentials), // superadmin + dept admin
   register: (userData) => api.post("/auth/register", userData),
+  forgotPassword: (email) => api.post("/auth/forgot-password", { email }),
+  resetPassword: (token, newPassword) =>
+    api.put(`/auth/reset-password/${token}`, { newPassword }),
   logout: () => {
     clearAuthData();
   },

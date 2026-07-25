@@ -115,9 +115,22 @@ export default function Login() {
               />
             </div>
 
-            {/* Password with Eye Icon */}
+            {/* Password with Eye Icon + Forgot Password link */}
             <div style={styles.field}>
-              <label style={styles.label}>{t("password")}</label>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <label style={styles.label}>{t("password")}</label>
+                <span
+                  style={{
+                    fontSize: 13,
+                    color: "#1a73e8",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                  }}
+                  onClick={() => navigate("/forgot-password")}
+                >
+                  Forgot Password?
+                </span>
+              </div>
               <div style={styles.passwordWrap}>
                 <input
                   style={styles.inputPassword}
