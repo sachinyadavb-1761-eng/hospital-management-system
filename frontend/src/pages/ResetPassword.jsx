@@ -21,11 +21,11 @@ export default function ResetPassword() {
     setMessage("");
 
     if (newPassword !== confirmPassword) {
-      setError("Dono password match nahi ho rahe.");
+      setError("Passwords do not match.");
       return;
     }
     if (newPassword.length < 6) {
-      setError("Password kam se kam 6 characters ka hona chahiye.");
+      setError("Password must be at least 6 characters long.");
       return;
     }
 
@@ -36,7 +36,7 @@ export default function ResetPassword() {
       setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
       setError(
-        err.response?.data?.message || "Link invalid ya expire ho chuka hai.",
+        err.response?.data?.message || "Link is invalid or has expired.",
       );
     } finally {
       setLoading(false);
@@ -63,9 +63,7 @@ export default function ResetPassword() {
         </div>
         <div style={styles.heroText}>
           <h1 style={styles.heroHeading}>
-            Naya
-            <br />
-            Password Set Karo
+            Set a New Password
           </h1>
         </div>
       </div>
@@ -77,19 +75,19 @@ export default function ResetPassword() {
 
         <div style={styles.card} className="rp-card">
           <h2 style={styles.cardTitle}>Reset Password</h2>
-          <p style={styles.cardSub}>Naya password daalo neeche.</p>
+          <p style={styles.cardSub}>Enter your new password below.</p>
 
           {error && <div style={styles.errorBox}>{error}</div>}
           {message && (
             <div style={styles.successBox}>
-              {message} Login page pe bhej rahe hain...
+              {message} Redirecting to login page...
             </div>
           )}
 
           {!message && (
             <form onSubmit={handleSubmit} style={styles.form}>
               <div style={styles.field}>
-                <label style={styles.label}>Naya Password</label>
+                <label style={styles.label}>New Password</label>
                 <div style={styles.passwordWrap}>
                   <input
                     style={styles.inputPassword}
@@ -110,7 +108,7 @@ export default function ResetPassword() {
               </div>
 
               <div style={styles.field}>
-                <label style={styles.label}>Password Confirm Karo</label>
+                <label style={styles.label}>Confirm Password</label>
                 <input
                   style={styles.input}
                   type={showPassword ? "text" : "password"}
@@ -129,7 +127,7 @@ export default function ResetPassword() {
                 }}
                 disabled={loading}
               >
-                {loading ? "Set kar rahe hain..." : "Password Set Karo →"}
+                {loading ? "Setting..." : "Set Password →"}
               </button>
             </form>
           )}

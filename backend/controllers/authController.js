@@ -169,16 +169,16 @@ export const forgotPassword = async (req, res) => {
     const { email } = req.body;
     const user = await User.findOne({ email, isDeleted: false });
 
-    // Security: user exist na kare tab bhi same message do (email enumeration se bachne ke liye)
+    // Security: do not reveal whether the user exists to prevent email enumeration
     if (!user) {
       return res.status(200).json({
-        message: "Agar ye email registered hai, to reset link bhej diya gaya hai.",
+        message: "If this email is registered, a reset link has been sent.",
       });
     }
 
-    // Raw token generate karo (ye email mein jayega)
+    // Generate the raw token (this will go in the email)
     const rawToken = crypto.randomBytes(32).toString("hex");
-    // Hashed version DB mein store karo (raw kabhi DB mein nahi rakhte)
+    // Store the hashed token in the DB (never store the raw token)
     const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
 
     user.resetPasswordToken = hashedToken;
@@ -190,14 +190,14 @@ export const forgotPassword = async (req, res) => {
     await sendEmail(
       user.email,
       "Password Reset - HospitalMan",
-      `<p>Namaste ${user.name},</p>
-       <p>Apna password reset karne ke liye niche diye link pe click karo (15 minute valid hai):</p>
+      `<p>Hello ${user.name},</p>
+       <p>Please click the link below to reset your password. It is valid for 15 minutes:</p>
        <a href="${resetUrl}">${resetUrl}</a>
-       <p>Agar ye request tumne nahi ki, to is email ko ignore kar do.</p>`,
+       <p>If you did not request this, please ignore this email.</p>`,
     );
 
     res.status(200).json({
-      message: "Agar ye email registered hai, to reset link bhej diya gaya hai.",
+      message: "If this email is registered, a reset link has been sent.",
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -219,7 +219,7 @@ export const resetPassword = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(400).json({ message: "Link invalid ya expire ho chuka hai." });
+      return res.status(400).json({ message: "Link is invalid or has expired." });
     }
 
     user.password = await bcrypt.hash(newPassword, 10);
@@ -227,7 +227,7 @@ export const resetPassword = async (req, res) => {
     user.resetPasswordExpires = null;
     await user.save();
 
-    res.status(200).json({ message: "Password reset ho gaya, ab login kar sakte ho." });
+    res.status(200).json({ message: "Password reset successful, you can now log in." });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -22,7 +22,7 @@ export default function ForgotPassword() {
       setMessage(res.data.message);
     } catch (err) {
       setError(
-        err.response?.data?.message || "Kuch gadbad ho gayi, dobara try karo.",
+        err.response?.data?.message || "Something went wrong, please try again.",
       );
     } finally {
       setLoading(false);
@@ -49,12 +49,10 @@ export default function ForgotPassword() {
         </div>
         <div style={styles.heroText}>
           <h1 style={styles.heroHeading}>
-            Password
-            <br />
-            Bhool Gaye?
+            Forgot Your Password?
           </h1>
           <p style={styles.heroSub}>
-            Koi baat nahi, email daalo aur reset link paa lo.
+            No worries, enter your email and get a reset link.
           </p>
         </div>
       </div>
@@ -67,7 +65,7 @@ export default function ForgotPassword() {
         <div style={styles.card} className="fp-card">
           <h2 style={styles.cardTitle}>Forgot Password</h2>
           <p style={styles.cardSub}>
-            Apni registered email daalo, hum reset link bhej denge.
+            Enter your registered email and we'll send you a reset link.
           </p>
 
           {error && <div style={styles.errorBox}>{error}</div>}
@@ -95,15 +93,15 @@ export default function ForgotPassword() {
                 }}
                 disabled={loading}
               >
-                {loading ? "Bhej rahe hain..." : "Reset Link Bhejo →"}
+                {loading ? "Sending..." : "Send Reset Link →"}
               </button>
             </form>
           )}
 
           <p style={styles.footer}>
-            Yaad aa gaya password?{" "}
+            Remembered your password?{" "}
             <span style={styles.link} onClick={() => navigate("/login")}>
-              Login karo
+              Login
             </span>
           </p>
         </div>
