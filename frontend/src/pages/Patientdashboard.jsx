@@ -8,6 +8,7 @@ import {
   doctorsAPI,
   patientsAPI,
   appointmentsAPI,
+  paymentAPI,
   departmentsAPI,
 } from "../services/api";
 import { useLanguage, LanguageSwitcher } from "../context/LanguageSwitcher";
@@ -95,8 +96,10 @@ export default function PatientDashboard() {
       );
       return;
     }
+
     setBooking(true);
     setBookError("");
+
     try {
       const payload = {
         doctor: bookForm.doctorId,
@@ -107,26 +110,118 @@ export default function PatientDashboard() {
         fee: selectedDoctor?.fee || 0,
         status: "pending",
       };
+
+      // 1) Create appointment (kept as before)
       const res = await appointmentsAPI.create(payload);
       const appt = res.data.appointment;
-      setReceipt({
-        appointmentId: appt._id,
-        doctorName: selectedDoctor?.name,
-        department:
-          selectedDoctor?.department?.name ||
-          selectedDoctor?.specialization ||
-          "—",
-        specialization: selectedDoctor?.specialization,
-        date: bookForm.date,
-        time: bookForm.time,
-        fee: selectedDoctor?.fee || 0,
-        patientName: myPatient.name,
-      });
-      setBookForm({ doctorId: "", date: "", time: "", notes: "" });
-      await fetchData();
+
+      // 2) Create Razorpay order for the appointment
+      let orderRes;
+      try {
+        orderRes = await paymentAPI.createOrder({
+          amount: appt?.fee || payload.fee || 0,
+          appointmentId: appt._id,
+        });
+      } catch (err) {
+        // If create-order fails, don't block booking — appointment is saved as pending
+        setBookError(
+          "Payment failed or cancelled. Your appointment is saved as pending — you can retry payment from My Appointments.",
+        );
+        setBookForm({ doctorId: "", date: "", time: "", notes: "" });
+        await fetchData();
+        setBooking(false);
+        return;
+      }
+
+      const { order, key_id } = orderRes.data || {};
+
+      // 3) Ensure Razorpay script is loaded
+      const loadRzp = () =>
+        new Promise((resolve) => {
+          if (window.Razorpay) return resolve(true);
+          const script = document.createElement("script");
+          script.src = "https://checkout.razorpay.com/v1/checkout.js";
+          script.onload = () => resolve(true);
+          script.onerror = () => resolve(false);
+          document.body.appendChild(script);
+        });
+
+      const loaded = await loadRzp();
+      if (!loaded || !order) {
+        setBookError(
+          "Payment failed or cancelled. Your appointment is saved as pending — you can retry payment from My Appointments.",
+        );
+        setBookForm({ doctorId: "", date: "", time: "", notes: "" });
+        await fetchData();
+        setBooking(false);
+        return;
+      }
+
+      // 4) Open Razorpay checkout
+      const options = {
+        key: key_id,
+        amount: order.amount,
+        currency: order.currency,
+        name: "MediCore",
+        description: "Appointment Payment",
+        order_id: order.id,
+        handler: async function (response) {
+          // Called on successful payment — verify on backend
+          try {
+            const verifyRes = await paymentAPI.verifyPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              appointmentId: appt._id,
+            });
+
+            if (verifyRes.data?.success) {
+              // Only after successful verify, show the receipt (keep same UI)
+              setReceipt({
+                appointmentId: appt._id,
+                doctorName: selectedDoctor?.name,
+                department:
+                  selectedDoctor?.department?.name ||
+                  selectedDoctor?.specialization ||
+                  "—",
+                specialization: selectedDoctor?.specialization,
+                date: bookForm.date,
+                time: bookForm.time,
+                fee: selectedDoctor?.fee || 0,
+                patientName: myPatient.name,
+              });
+              setBookForm({ doctorId: "", date: "", time: "", notes: "" });
+              await fetchData();
+            } else {
+              setBookError(
+                "Payment failed or cancelled. Your appointment is saved as pending — you can retry payment from My Appointments.",
+              );
+            }
+          } catch (err) {
+            setBookError(
+              "Payment failed or cancelled. Your appointment is saved as pending — you can retry payment from My Appointments.",
+            );
+          } finally {
+            setBooking(false);
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            // User closed the popup without paying
+            setBookError(
+              "Payment failed or cancelled. Your appointment is saved as pending — you can retry payment from My Appointments.",
+            );
+            setBooking(false);
+          },
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+
+      // Keep booking=true while payment is in progress so button shows processing state
     } catch (err) {
       setBookError(err.response?.data?.message || "Booking failed. Try again.");
-    } finally {
       setBooking(false);
     }
   };

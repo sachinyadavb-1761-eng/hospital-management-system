@@ -102,4 +102,12 @@ export const appointmentsAPI = {
   getAnalytics: () => api.get("/appointments/analytics"),
 };
 
+// ══════════════════════════════════════════════════════════════
+// PAYMENT
+// ══════════════════════════════════════════════════════════════
+export const paymentAPI = {
+  createOrder: (data) => api.post("/payment/create-order", data),
+  verifyPayment: (data) => api.post("/payment/verify", data),
+};
+
 export default api;
