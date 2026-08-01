@@ -10,6 +10,7 @@ import userRoutes from "./routes/userRoutes.js";
 import departmentRoutes from "./routes/departmentRoutes.js";
 import Department from "./models/Department.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
+import chatbotRoutes from "./routes/chatbotRoutes.js";
 
 // 1. Configs
 dotenv.config();
@@ -69,7 +70,7 @@ app.use("/api/appointments", appointmentRoutes);
 app.use("/api/patients", patientRoutes);
 app.use("/api/departments", departmentRoutes);
 app.use("/api/payment", paymentRoutes);
-
+app.use("/api/chatbot", chatbotRoutes);
 app.get("/", (req, res) => {
   res.send("Hospital Management System backend running! ✅");
 });
