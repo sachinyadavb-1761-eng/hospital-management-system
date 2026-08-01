@@ -109,5 +109,11 @@ export const paymentAPI = {
   createOrder: (data) => api.post("/payment/create-order", data),
   verifyPayment: (data) => api.post("/payment/verify", data),
 };
-
+//══════════════════════════════════════════════════════════════
+// CHATBOAT
+// ══════════════════════════════════════════════════════════════
+export const chatbotAPI = {
+  sendMessage: (message, history) =>
+    api.post("/chatbot/message", { message, history }),
+};
 export default api;

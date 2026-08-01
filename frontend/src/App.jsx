@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { LanguageProvider } from "./context/LanguageSwitcher"; // ← ADD THIS
+import { LanguageProvider } from "./context/LanguageSwitcher";
 
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -13,26 +13,25 @@ import DoctorDashboard from "./pages/DoctorDashboard";
 import PatientDashboard from "./pages/Patientdashboard";
 import Unauthorized from "./pages/Unauthorized";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ChatWidget from "./components/ChatWidget";
 
 export default function App() {
   return (
     <LanguageProvider>
-      {" "}
-      {/* ← WRAP KARO — ek baar language change → sab jagah apply */}
       <BrowserRouter>
         <Routes>
           {/* ══════════════════════════════════════════
-              PUBLIC — Patient ke liye
+              PUBLIC
           ══════════════════════════════════════════ */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
-          // ... aur Routes ke andar:
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
+
           {/* ══════════════════════════════════════════
-              DOCTOR & ADMIN — Alag URL pe
+              DOCTOR & ADMIN — separate URLs
           ══════════════════════════════════════════ */}
           <Route path="/doctor-login" element={<DoctorLogin />} />
           <Route path="/admin-login" element={<AdminLogin />} />
@@ -44,6 +43,7 @@ export default function App() {
             path="/staff-login"
             element={<Navigate to="/doctor-login" replace />}
           />
+
           {/* ══════════════════════════════════════════
               PATIENT only
           ══════════════════════════════════════════ */}
@@ -75,6 +75,7 @@ export default function App() {
             path="/profile"
             element={<Navigate to="/patient/dashboard" replace />}
           />
+
           {/* ══════════════════════════════════════════
               DOCTOR only
           ══════════════════════════════════════════ */}
@@ -106,6 +107,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
           {/* ══════════════════════════════════════════
               ADMIN only
           ══════════════════════════════════════════ */}
@@ -150,9 +152,12 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+
+        <ChatWidget />
       </BrowserRouter>
     </LanguageProvider>
   );
