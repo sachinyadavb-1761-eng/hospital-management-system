@@ -18,7 +18,8 @@ router.post("/doctor-login", loginDoctor); // Doctor only
 router.post("/staff-login", loginStaff); // Receptionist only
 router.post("/admin-login", loginAdmin); // Superadmin + Department admin
 
-router.post("/forgot-password", forgotPassword);
-router.put("/reset-password/:token", resetPassword);
+// OTP based forgot/reset password — email ya phone dono support karta hai
+router.post("/forgot-password", forgotPassword); // Step 1: send OTP
+router.post("/reset-password", resetPassword); // Step 2: verify OTP + set new password
 
 export default router;

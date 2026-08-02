@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import sendEmail from "../utils/sendEmail.js";
+import sendSMS from "../utils/sendSMS.js";
 
 // ─── Shared: verify credentials and generate token ───────────────────────────
 async function verifyAndSign(email, password) {
@@ -37,7 +38,7 @@ async function verifyAndSign(email, password) {
 // ─── Register ─────────────────────────────────────────────────────────────────
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, phone } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -50,6 +51,7 @@ export const registerUser = async (req, res) => {
     const user = await User.create({
       name,
       email,
+      phone: phone || "",
       password: hashedPassword,
       role: userRole,
       department: req.body.department || null,
@@ -59,7 +61,7 @@ export const registerUser = async (req, res) => {
       await Patient.create({
         name,
         email,
-        phone: "0000000000",
+        phone: phone || "0000000000",
         age: 0,
         gender: "male",
         bloodGroup: "",
@@ -163,71 +165,135 @@ export const loginAdmin = async (req, res) => {
   }
 };
 
-// ─── Forgot Password — POST /api/auth/forgot-password ───────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// FORGOT PASSWORD — OTP based (email ya phone, user ki choice)
+// ══════════════════════════════════════════════════════════════════════════
+
+// ─── Step 1: Send OTP — POST /api/auth/forgot-password ──────────────────────
+// body: { identifier: "email or 10-digit phone", method: "email" | "phone" }
 export const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
-    const user = await User.findOne({ email, isDeleted: false });
+    const { identifier, method } = req.body;
 
-    // Security: do not reveal whether the user exists to prevent email enumeration
-    if (!user) {
-      return res.status(200).json({
-        message: "If this email is registered, a reset link has been sent.",
+    if (!identifier || !["email", "phone"].includes(method)) {
+      return res.status(400).json({
+        message: "Please provide identifier and a valid method (email/phone).",
       });
     }
 
-    // Generate the raw token (this will go in the email)
-    const rawToken = crypto.randomBytes(32).toString("hex");
-    // Store the hashed token in the DB (never store the raw token)
-    const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const query =
+      method === "email"
+        ? { email: identifier, isDeleted: false }
+        : { phone: identifier, isDeleted: false };
 
-    user.resetPasswordToken = hashedToken;
-    user.resetPasswordExpires = Date.now() + 15 * 60 * 1000; // 15 minute
+    const user = await User.findOne(query);
+
+    // Security: do not reveal whether the user exists to prevent enumeration
+    const genericMsg = `If this ${method} is registered, an OTP has been sent.`;
+    if (!user) {
+      return res.status(200).json({ message: genericMsg });
+    }
+
+    if (method === "phone" && !user.phone) {
+      // Registered user ke paas phone number save hi nahi hai
+      return res.status(200).json({ message: genericMsg });
+    }
+
+    // 6-digit OTP generate karo
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
+
+    user.resetOtpHash = hashedOtp;
+    user.resetOtpExpires = Date.now() + 10 * 60 * 1000; // 10 minute valid
+    user.resetOtpMethod = method;
+    user.resetOtpAttempts = 0;
     await user.save();
 
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${rawToken}`;
+    if (method === "email") {
+      await sendEmail(
+        user.email,
+        "Your Password Reset OTP - HospitalMan",
+        `<p>Hello ${user.name},</p>
+         <p>Your OTP to reset your password is:</p>
+         <h2 style="letter-spacing:4px;">${otp}</h2>
+         <p>This OTP is valid for 10 minutes. If you did not request this, please ignore this email.</p>`,
+      );
+    } else {
+      await sendSMS(
+        user.phone,
+        `Your HospitalMan password reset OTP is ${otp}. Valid for 10 minutes. Do not share it with anyone.`,
+      );
+    }
 
-    await sendEmail(
-      user.email,
-      "Password Reset - HospitalMan",
-      `<p>Hello ${user.name},</p>
-       <p>Please click the link below to reset your password. It is valid for 15 minutes:</p>
-       <a href="${resetUrl}">${resetUrl}</a>
-       <p>If you did not request this, please ignore this email.</p>`,
-    );
-
-    res.status(200).json({
-      message: "If this email is registered, a reset link has been sent.",
-    });
+    res.status(200).json({ message: genericMsg });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// ─── Reset Password — PUT /api/auth/reset-password/:token ───────────────────
+// ─── Step 2: Verify OTP + Set new password — POST /api/auth/reset-password ──
+// body: { identifier, method, otp, newPassword }
 export const resetPassword = async (req, res) => {
   try {
-    const { token } = req.params;
-    const { newPassword } = req.body;
+    const { identifier, method, otp, newPassword } = req.body;
 
-    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-
-    const user = await User.findOne({
-      resetPasswordToken: hashedToken,
-      resetPasswordExpires: { $gt: Date.now() },
-      isDeleted: false,
-    });
-
-    if (!user) {
-      return res.status(400).json({ message: "Link is invalid or has expired." });
+    if (!identifier || !method || !otp || !newPassword) {
+      return res.status(400).json({ message: "All fields are required." });
+    }
+    if (newPassword.length < 6) {
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters long." });
     }
 
+    const query =
+      method === "email"
+        ? { email: identifier, isDeleted: false }
+        : { phone: identifier, isDeleted: false };
+
+    const user = await User.findOne(query);
+
+    if (
+      !user ||
+      !user.resetOtpHash ||
+      user.resetOtpMethod !== method ||
+      !user.resetOtpExpires ||
+      user.resetOtpExpires < Date.now()
+    ) {
+      return res
+        .status(400)
+        .json({ message: "OTP is invalid or has expired." });
+    }
+
+    // Brute force protection — 5 galat attempts ke baad OTP invalidate
+    if (user.resetOtpAttempts >= 5) {
+      user.resetOtpHash = null;
+      user.resetOtpExpires = null;
+      user.resetOtpMethod = null;
+      await user.save();
+      return res.status(429).json({
+        message: "Too many incorrect attempts. Please request a new OTP.",
+      });
+    }
+
+    const hashedInput = crypto.createHash("sha256").update(otp).digest("hex");
+    if (hashedInput !== user.resetOtpHash) {
+      user.resetOtpAttempts += 1;
+      await user.save();
+      return res.status(400).json({ message: "Incorrect OTP." });
+    }
+
+    // OTP correct — password update, OTP clear
     user.password = await bcrypt.hash(newPassword, 10);
-    user.resetPasswordToken = null;
-    user.resetPasswordExpires = null;
+    user.resetOtpHash = null;
+    user.resetOtpExpires = null;
+    user.resetOtpMethod = null;
+    user.resetOtpAttempts = 0;
     await user.save();
 
-    res.status(200).json({ message: "Password reset successful, you can now log in." });
+    res
+      .status(200)
+      .json({ message: "Password reset successful, you can now log in." });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
