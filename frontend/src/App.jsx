@@ -4,7 +4,6 @@ import { LanguageProvider } from "./context/LanguageSwitcher";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
 import DoctorLogin from "./pages/DoctorLogin";
 import AdminLogin from "./pages/AdminLogin";
 import Register from "./pages/Register";
@@ -28,7 +27,6 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password/:token" element={<ResetPassword />} />
 
           {/* ══════════════════════════════════════════
               DOCTOR & ADMIN — separate URLs

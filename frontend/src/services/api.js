@@ -41,9 +41,12 @@ export const authAPI = {
   loginStaff: (credentials) => api.post("/auth/staff-login", credentials), // receptionist
   loginAdmin: (credentials) => api.post("/auth/admin-login", credentials), // superadmin + dept admin
   register: (userData) => api.post("/auth/register", userData),
-  forgotPassword: (email) => api.post("/auth/forgot-password", { email }),
-  resetPassword: (token, newPassword) =>
-    api.put(`/auth/reset-password/${token}`, { newPassword }),
+  // OTP based forgot/reset password
+  // method: "email" | "phone", identifier: email address or 10-digit phone
+  forgotPassword: (identifier, method) =>
+    api.post("/auth/forgot-password", { identifier, method }),
+  resetPassword: (identifier, method, otp, newPassword) =>
+    api.post("/auth/reset-password", { identifier, method, otp, newPassword }),
   logout: () => {
     clearAuthData();
   },

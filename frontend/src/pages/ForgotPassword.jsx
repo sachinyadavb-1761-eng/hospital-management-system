@@ -7,26 +7,79 @@ import { useLanguage, LanguageSwitcher } from "../context/LanguageSwitcher";
 export default function ForgotPassword() {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const [email, setEmail] = useState("");
+
+  const [step, setStep] = useState(1); // 1 = request OTP, 2 = enter OTP + new password
+  const [method, setMethod] = useState("email"); // "email" | "phone"
+  const [identifier, setIdentifier] = useState("");
+
+  const [otp, setOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
+  // ─── Step 1: request OTP ───────────────────────────────────────────
+  const handleSendOtp = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     setMessage("");
     try {
-      const res = await authAPI.forgotPassword(email);
+      const res = await authAPI.forgotPassword(identifier, method);
       setMessage(res.data.message);
+      setStep(2);
     } catch (err) {
       setError(
-        err.response?.data?.message || "Something went wrong, please try again.",
+        err.response?.data?.message ||
+          "Something went wrong, please try again.",
       );
     } finally {
       setLoading(false);
     }
+  };
+
+  // ─── Step 2: verify OTP + set new password ─────────────────────────
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await authAPI.resetPassword(
+        identifier,
+        method,
+        otp,
+        newPassword,
+      );
+      setMessage(res.data.message);
+      setTimeout(() => navigate("/login"), 2000);
+    } catch (err) {
+      setError(err.response?.data?.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetToStepOne = () => {
+    setStep(1);
+    setOtp("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setError("");
+    setMessage("");
   };
 
   return (
@@ -48,11 +101,9 @@ export default function ForgotPassword() {
           <span style={styles.brandName}>MediCore</span>
         </div>
         <div style={styles.heroText}>
-          <h1 style={styles.heroHeading}>
-            Forgot Your Password?
-          </h1>
+          <h1 style={styles.heroHeading}>Forgot Your Password?</h1>
           <p style={styles.heroSub}>
-            No worries, enter your email and get a reset link.
+            No worries, verify with an OTP and set a new one.
           </p>
         </div>
       </div>
@@ -63,47 +114,181 @@ export default function ForgotPassword() {
         </div>
 
         <div style={styles.card} className="fp-card">
-          <h2 style={styles.cardTitle}>Forgot Password</h2>
-          <p style={styles.cardSub}>
-            Enter your registered email and we'll send you a reset link.
-          </p>
+          {step === 1 && (
+            <>
+              <h2 style={styles.cardTitle}>Forgot Password</h2>
+              <p style={styles.cardSub}>
+                Choose how you'd like to receive your OTP.
+              </p>
 
-          {error && <div style={styles.errorBox}>{error}</div>}
-          {message && <div style={styles.successBox}>{message}</div>}
+              {error && <div style={styles.errorBox}>{error}</div>}
 
-          {!message && (
-            <form onSubmit={handleSubmit} style={styles.form}>
-              <div style={styles.field}>
-                <label style={styles.label}>{t("email")}</label>
-                <input
-                  style={styles.input}
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  required
-                />
-              </div>
+              <form onSubmit={handleSendOtp} style={styles.form}>
+                <div style={styles.toggleRow}>
+                  <button
+                    type="button"
+                    style={{
+                      ...styles.toggleBtn,
+                      ...(method === "email" ? styles.toggleBtnActive : {}),
+                    }}
+                    onClick={() => {
+                      setMethod("email");
+                      setIdentifier("");
+                    }}
+                  >
+                    📧 Email
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      ...styles.toggleBtn,
+                      ...(method === "phone" ? styles.toggleBtnActive : {}),
+                    }}
+                    onClick={() => {
+                      setMethod("phone");
+                      setIdentifier("");
+                    }}
+                  >
+                    📱 Phone
+                  </button>
+                </div>
 
-              <button
-                type="submit"
-                style={{
-                  ...styles.btn,
-                  ...(loading ? styles.btnDisabled : {}),
-                }}
-                disabled={loading}
-              >
-                {loading ? "Sending..." : "Send Reset Link →"}
-              </button>
-            </form>
+                <div style={styles.field}>
+                  <label style={styles.label}>
+                    {method === "email" ? t("email") : "Phone Number"}
+                  </label>
+                  <input
+                    style={styles.input}
+                    type={method === "email" ? "email" : "tel"}
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    placeholder={
+                      method === "email"
+                        ? "your@email.com"
+                        : "10-digit mobile number"
+                    }
+                    pattern={method === "phone" ? "[0-9]{10}" : undefined}
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  style={{
+                    ...styles.btn,
+                    ...(loading ? styles.btnDisabled : {}),
+                  }}
+                  disabled={loading}
+                >
+                  {loading ? "Sending..." : "Send OTP →"}
+                </button>
+              </form>
+
+              <p style={styles.footer}>
+                Remembered your password?{" "}
+                <span style={styles.link} onClick={() => navigate("/login")}>
+                  Login
+                </span>
+              </p>
+            </>
           )}
 
-          <p style={styles.footer}>
-            Remembered your password?{" "}
-            <span style={styles.link} onClick={() => navigate("/login")}>
-              Login
-            </span>
-          </p>
+          {step === 2 && (
+            <>
+              <h2 style={styles.cardTitle}>Enter OTP</h2>
+              <p style={styles.cardSub}>
+                We sent a 6-digit OTP to your{" "}
+                {method === "email" ? "email" : "phone"}. It's valid for 10
+                minutes.
+              </p>
+
+              {error && <div style={styles.errorBox}>{error}</div>}
+              {message && <div style={styles.successBox}>{message}</div>}
+
+              {!message && (
+                <form onSubmit={handleResetPassword} style={styles.form}>
+                  <div style={styles.field}>
+                    <label style={styles.label}>OTP</label>
+                    <input
+                      style={{
+                        ...styles.input,
+                        letterSpacing: 4,
+                        fontWeight: 700,
+                      }}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={otp}
+                      onChange={(e) =>
+                        setOtp(e.target.value.replace(/\D/g, ""))
+                      }
+                      placeholder="••••••"
+                      required
+                    />
+                  </div>
+
+                  <div style={styles.field}>
+                    <label style={styles.label}>New Password</label>
+                    <div style={styles.passwordWrap}>
+                      <input
+                        style={styles.inputPassword}
+                        type={showPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="••••••••"
+                        required
+                      />
+                      <button
+                        type="button"
+                        style={styles.eyeBtn}
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? "🙈" : "👁"}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={styles.field}>
+                    <label style={styles.label}>Confirm Password</label>
+                    <input
+                      style={styles.input}
+                      type={showPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    style={{
+                      ...styles.btn,
+                      ...(loading ? styles.btnDisabled : {}),
+                    }}
+                    disabled={loading}
+                  >
+                    {loading ? "Setting..." : "Reset Password →"}
+                  </button>
+                </form>
+              )}
+
+              {message && (
+                <p style={{ textAlign: "center", color: "#64748b" }}>
+                  Redirecting to login...
+                </p>
+              )}
+
+              {!message && (
+                <p style={styles.footer}>
+                  Didn't get the OTP?{" "}
+                  <span style={styles.link} onClick={resetToStepOne}>
+                    Try again
+                  </span>
+                </p>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -199,6 +384,41 @@ const styles = {
     outline: "none",
     width: "100%",
     boxSizing: "border-box",
+  },
+  passwordWrap: { position: "relative", display: "flex", alignItems: "center" },
+  inputPassword: {
+    padding: "12px 44px 12px 12px",
+    borderRadius: 10,
+    border: "1px solid #e2e8f0",
+    fontSize: 14,
+    outline: "none",
+    width: "100%",
+    boxSizing: "border-box",
+  },
+  eyeBtn: {
+    position: "absolute",
+    right: 12,
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    fontSize: 16,
+  },
+  toggleRow: { display: "flex", gap: 10 },
+  toggleBtn: {
+    flex: 1,
+    padding: "10px",
+    borderRadius: 10,
+    border: "1px solid #e2e8f0",
+    background: "#f8fafc",
+    color: "#475569",
+    fontWeight: 600,
+    cursor: "pointer",
+    fontSize: 14,
+  },
+  toggleBtnActive: {
+    background: "linear-gradient(135deg, #0f4c81, #1a73e8)",
+    color: "#fff",
+    border: "1px solid transparent",
   },
   btn: {
     marginTop: 10,
