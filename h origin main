@@ -1,0 +1,5 @@
+[33m7c795cc[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/agents/translate-hinglish-to-english-text[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32magents/translate-hinglish-to-english-text[m[33m, [m[1;32magents/razorpay-integration-appointment-flow[m[33m, [m[1;32magents/payment-routes-integration[m[33m)[m Translate Hinglish UI text and messages to English in forgot/reset password flow
+[33m165248b[m Push: update backend changes (ignore node_modules and .env)
+[33mbbcdb72[m Add forgot password and reset password pages
+[33m4e427e1[m Remove node_modules from tracking
+[33m487cb77[m fix: replace remaining hardcoded 'admin' role checks with superadmin/departmentadmin across department, doctor, patient, appointment, user routes

@@ -1,12 +1,16 @@
 // src/pages/Home.jsx
-// Changes:
-// 1. useLanguage hook — t() se saare texts translate hote hain
-// 2. LanguageSwitcher component navbar mein add kiya
-// 3. Responsive CSS — mobile/tablet/desktop sab handle
-// 4. Password eye icon yahan nahi (login pages mein hai)
-// 5. FIX: Dark theme — service cards, doctor cards, contact section sab dark
+// Redesign notes:
+// 1. Same logic, hooks, routes, translations (t()) — only presentation layer changed
+// 2. Visual language: deep-navy glass surfaces + layered "embossed" 3D shadows
+//    instead of flat SaaS cards. One bold moment: the hero appointment card,
+//    which tilts in 3D based on cursor position (perspective + rotateX/rotateY).
+// 3. Palette moved from single blue to teal (clinical/calm) + a sparing coral
+//    accent used only for live/status indicators, so it reads intentional.
+// 4. Space Grotesk for headings (distinct from Inter body) for real typographic
+//    identity instead of one default family doing every job.
+// 5. Removed tracked-out ALL-CAPS eyebrow labels; replaced with a small dot+label.
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { isLoggedIn, getUser, logout, getDashboardPath } from "../utils/auth";
 import { useLanguage, LanguageSwitcher } from "../context/LanguageSwitcher";
@@ -17,28 +21,28 @@ const DOCTORS = [
     spec: "Cardiologist",
     exp: "12 yrs",
     img: "AM",
-    color: "#0ea5e9",
+    color: "#2DD4BF",
   },
   {
     name: "Dr. Priya Sharma",
     spec: "Neurologist",
     exp: "9 yrs",
     img: "PS",
-    color: "#8b5cf6",
+    color: "#A78BFA",
   },
   {
     name: "Dr. Rohan Verma",
     spec: "Orthopedic",
     exp: "15 yrs",
     img: "RV",
-    color: "#10b981",
+    color: "#34D399",
   },
   {
     name: "Dr. Sneha Gupta",
     spec: "Pediatrician",
     exp: "7 yrs",
     img: "SG",
-    color: "#f59e0b",
+    color: "#FBBF24",
   },
 ];
 
@@ -99,6 +103,10 @@ export default function Home() {
   });
   const [submitted, setSubmitted] = useState(false);
 
+  // 3D tilt for the hero card — the one deliberately "showy" element on the page
+  const heroCardRef = useRef(null);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60);
     window.addEventListener("scroll", onScroll);
@@ -118,18 +126,26 @@ export default function Home() {
     setContactForm({ name: "", email: "", message: "" });
   };
 
+  const handleHeroMove = (e) => {
+    const card = heroCardRef.current;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width - 0.5;
+    const py = (e.clientY - rect.top) / rect.height - 0.5;
+    setTilt({ x: py * -10, y: px * 14 });
+  };
+  const resetHeroTilt = () => setTilt({ x: 0, y: 0 });
+
   return (
     <div style={s.root}>
-      {/* ── Navbar ── */}
+      {/* ── Navbar (glass) ── */}
       <nav style={{ ...s.nav, ...(scrolled ? s.navScrolled : {}) }}>
         <div style={s.navInner}>
-          {/* Logo */}
           <div style={s.logo}>
             <div style={s.logoMark}>✚</div>
             <span style={s.logoText}>MediCore</span>
           </div>
 
-          {/* Desktop Nav Links */}
           <div style={s.navLinks} className="nav-links-desktop">
             {["home", "services", "doctors", "about", "contact"].map((sec) => (
               <button
@@ -145,10 +161,8 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Desktop Actions */}
           <div style={s.navActions} className="nav-actions-desktop">
             <LanguageSwitcher />
-
             {loggedIn && authUser ? (
               <>
                 <span style={s.navUserName}>
@@ -180,7 +194,6 @@ export default function Home() {
             )}
           </div>
 
-          {/* Mobile Hamburger */}
           <button
             style={s.hamburger}
             className="hamburger"
@@ -191,7 +204,6 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Mobile Menu */}
         {menuOpen && (
           <div style={s.mobileMenu}>
             {["home", "services", "doctors", "about", "contact"].map((sec) => (
@@ -250,10 +262,15 @@ export default function Home() {
 
       {/* ── Hero ── */}
       <section id="home" style={s.hero}>
-        <div style={s.heroBg} />
+        <div style={s.heroOrbTeal} />
+        <div style={s.heroOrbCoral} />
         <div style={s.heroGrid} />
+
         <div style={s.heroContent}>
-          <div style={s.heroTag}>🏥 {t("tagline")}</div>
+          <div style={s.eyebrow}>
+            <span style={s.eyebrowDot} />
+            {t("tagline")}
+          </div>
           <h1 style={s.heroTitle}>
             {t("heroTitle1")} <br />
             <span style={s.heroAccent}>{t("heroTitle2")}</span>
@@ -286,14 +303,24 @@ export default function Home() {
             ))}
           </div>
         </div>
+
         <div style={s.heroVisual}>
-          <div style={s.heroCard}>
+          <div
+            ref={heroCardRef}
+            onMouseMove={handleHeroMove}
+            onMouseLeave={resetHeroTilt}
+            style={{
+              ...s.heroCard,
+              transform: `perspective(900px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateZ(0)`,
+            }}
+          >
+            <div style={s.heroCardShine} />
             <div style={s.heroCardHeader}>
-              <div style={s.heroCardDot} />
+              <span style={s.heroCardLiveDot} />
               <span style={s.heroCardTitle}>{t("nextAppointment")}</span>
             </div>
             <div style={s.heroCardDoctor}>
-              <div style={{ ...s.heroCardAvatar, background: "#0ea5e9" }}>
+              <div style={{ ...s.heroCardAvatar, background: "#2DD4BF" }}>
                 AM
               </div>
               <div>
@@ -303,14 +330,18 @@ export default function Home() {
             </div>
             <div style={s.heroCardStatus}>{t("confirmed")}</div>
           </div>
+          <div style={s.heroCardFloor} />
         </div>
       </section>
 
       {/* ── Services ── */}
-      <section id="services" style={{ ...s.section, background: "#0f172a" }}>
+      <section id="services" style={{ ...s.section, background: s.tone.a }}>
         <div style={s.sectionInner}>
-          <div style={s.sectionTag}>{t("whatWeOffer")}</div>
-          <h2 style={{ ...s.sectionTitle, color: "#fff" }}>
+          <div style={s.eyebrow}>
+            <span style={s.eyebrowDot} />
+            {t("whatWeOffer")}
+          </div>
+          <h2 style={s.sectionTitle}>
             {t("ourSpecializations").split(" ").slice(0, -1).join(" ")}{" "}
             <span style={s.accent}>
               {t("ourSpecializations").split(" ").slice(-1)}
@@ -318,15 +349,21 @@ export default function Home() {
           </h2>
           <div style={s.serviceGrid}>
             {SERVICES_DATA.map((sv) => (
-              <div key={sv.titleKey} style={s.serviceCard}>
-                <div style={s.serviceIcon}>{sv.icon}</div>
+              <div
+                key={sv.titleKey}
+                style={s.serviceCard}
+                className="lift-card"
+              >
+                <div style={s.serviceIconBadge}>
+                  <span style={s.serviceIconGlyph}>{sv.icon}</span>
+                </div>
                 <h3 style={s.serviceTitle}>{sv.titleKey}</h3>
                 <p style={s.serviceDesc}>{sv.descKey}</p>
                 <button
                   style={s.serviceBtn}
                   onClick={() => navigate("/register")}
                 >
-                  {t("bookNow")}
+                  {t("bookNow")} →
                 </button>
               </div>
             ))}
@@ -335,10 +372,13 @@ export default function Home() {
       </section>
 
       {/* ── Doctors ── */}
-      <section id="doctors" style={{ ...s.section, background: "#0f1f35" }}>
+      <section id="doctors" style={{ ...s.section, background: s.tone.b }}>
         <div style={s.sectionInner}>
-          <div style={s.sectionTag}>{t("meetTheTeam")}</div>
-          <h2 style={{ ...s.sectionTitle, color: "#fff" }}>
+          <div style={s.eyebrow}>
+            <span style={s.eyebrowDot} />
+            {t("meetTheTeam")}
+          </div>
+          <h2 style={s.sectionTitle}>
             {t("ourTopDoctors").split(" ").slice(0, -2).join(" ")}{" "}
             <span style={s.accent}>
               {t("ourTopDoctors").split(" ").slice(-2).join(" ")}
@@ -346,12 +386,16 @@ export default function Home() {
           </h2>
           <div style={s.doctorGrid}>
             {DOCTORS.map((doc) => (
-              <div key={doc.name} style={s.doctorCard}>
-                <div style={{ ...s.doctorAvatar, background: doc.color }}>
-                  {doc.img}
+              <div key={doc.name} style={s.doctorCard} className="lift-card">
+                <div style={s.doctorAvatarRing}>
+                  <div style={{ ...s.doctorAvatar, background: doc.color }}>
+                    {doc.img}
+                  </div>
                 </div>
                 <h3 style={s.doctorName}>{doc.name}</h3>
-                <div style={s.doctorSpec}>{doc.spec}</div>
+                <div style={s.doctorSpec}>
+                  {doc.spec} · {doc.exp}
+                </div>
                 <button
                   style={s.doctorBtn}
                   onClick={() => navigate("/register")}
@@ -365,15 +409,15 @@ export default function Home() {
       </section>
 
       {/* ── Payment ── */}
-      <section style={{ ...s.section, background: "#0f172a" }}>
+      <section style={{ ...s.section, background: s.tone.a }}>
         <div style={s.sectionInner}>
-          <h2 style={{ ...s.sectionTitle, color: "#fff", textAlign: "center" }}>
+          <h2 style={{ ...s.sectionTitle, textAlign: "center" }}>
             {t("allPaymentMethods")}
           </h2>
           <div style={s.paymentGrid}>
             {PAYMENT_METHODS.map((pm) => (
               <div key={pm.name} style={s.paymentCard}>
-                <span style={s.paymentIcon}>{pm.icon}</span>
+                <span style={s.paymentIconBadge}>{pm.icon}</span>
                 <span style={s.paymentName}>{pm.name}</span>
               </div>
             ))}
@@ -382,18 +426,18 @@ export default function Home() {
       </section>
 
       {/* ── Contact ── */}
-      <section id="contact" style={{ ...s.section, background: "#0f1f35" }}>
+      <section id="contact" style={{ ...s.section, background: s.tone.b }}>
         <div style={s.sectionInner}>
           <div style={s.contactGrid}>
             <div style={s.contactInfo}>
-              <h2 style={{ ...s.sectionTitle, color: "#fff" }}>
+              <h2 style={s.sectionTitle}>
                 {t("contactUs").split(" ")[0]}{" "}
                 <span style={s.accent}>
                   {t("contactUs").split(" ").slice(1).join(" ")}
                 </span>
               </h2>
-              <p style={{ color: "#94a3b8" }}>{t("address")}</p>
-              <p style={{ color: "#94a3b8" }}>{t("phone")}</p>
+              <p style={s.contactInfoText}>{t("address")}</p>
+              <p style={s.contactInfoText}>{t("phone")}</p>
             </div>
             <form onSubmit={handleContact} style={s.contactForm}>
               {submitted && <div style={s.successBox}>{t("messageSent")}</div>}
@@ -409,7 +453,7 @@ export default function Home() {
                 required
               />
               <textarea
-                style={{ ...s.contactInput, height: 100 }}
+                style={{ ...s.contactInput, height: 100, resize: "vertical" }}
                 placeholder={t("message")}
                 required
               />
@@ -424,13 +468,14 @@ export default function Home() {
       {/* ── Footer ── */}
       <footer style={s.footer}>
         <div style={s.footerInner}>
-          <span style={{ color: "#fff", fontWeight: 800 }}>MediCore</span>
+          <span style={s.footerLogo}>MediCore</span>
           <p style={s.footerCopy}>© 2026 MediCore. All rights reserved.</p>
         </div>
       </footer>
 
-      {/* ── Responsive Styles ── */}
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
         @media (max-width: 640px) {
           .nav-links-desktop { display: none !important; }
           .nav-actions-desktop { display: none !important; }
@@ -439,16 +484,56 @@ export default function Home() {
         @media (min-width: 641px) {
           .hamburger { display: none !important; }
         }
+
+        .lift-card { transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease; }
+        .lift-card:hover {
+          transform: translateY(-6px);
+          border-color: rgba(45,212,191,0.35) !important;
+          box-shadow:
+            0 24px 48px -20px rgba(0,0,0,0.65),
+            0 0 0 1px rgba(45,212,191,0.08) inset !important;
+        }
+
+        @keyframes driftTeal {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(20px, -24px); }
+        }
+        @keyframes driftCoral {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(-16px, 18px); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .lift-card, .lift-card:hover { transition: none !important; transform: none !important; }
+        }
       `}</style>
     </div>
   );
 }
 
+const tone = {
+  bg: "#0A0E17", // base
+  a: "#0A0E17", // section tone A
+  b: "#0D1420", // section tone B (slightly lifted)
+  glass: "rgba(255,255,255,0.045)",
+  glassBorder: "rgba(255,255,255,0.08)",
+  text: "#EEF2F7",
+  muted: "#8CA0B8",
+  teal: "#2DD4BF",
+  tealDeep: "#0F766E",
+  coral: "#FF7A7A",
+};
+
+const shadowLift =
+  "0 20px 44px -22px rgba(2,6,15,0.75), 0 2px 0 rgba(255,255,255,0.03) inset";
+
 const s = {
+  tone,
   root: {
     fontFamily: "'Inter', sans-serif",
-    background: "#0f172a", // ← FIXED: dark background globally
+    background: tone.bg,
     overflowX: "hidden",
+    color: tone.text,
   },
 
   // ── Navbar ──
@@ -458,13 +543,16 @@ const s = {
     left: 0,
     right: 0,
     zIndex: 100,
-    padding: "20px 0",
+    padding: "18px 0",
     transition: "all 0.3s",
   },
   navScrolled: {
-    background: "rgba(15,23,42,0.97)",
-    boxShadow: "0 2px 20px rgba(0,0,0,0.3)",
-    padding: "14px 0",
+    background: "rgba(10,14,23,0.75)",
+    backdropFilter: "blur(16px) saturate(140%)",
+    WebkitBackdropFilter: "blur(16px) saturate(140%)",
+    boxShadow:
+      "0 1px 0 rgba(255,255,255,0.06), 0 20px 40px -24px rgba(0,0,0,0.8)",
+    padding: "12px 0",
   },
   navInner: {
     maxWidth: 1200,
@@ -479,36 +567,45 @@ const s = {
   logoMark: {
     width: 36,
     height: 36,
-    background: "#0ea5e9",
-    borderRadius: 10,
+    borderRadius: 11,
+    background: `linear-gradient(145deg, ${tone.teal}, ${tone.tealDeep})`,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#fff",
+    color: "#04201c",
     fontWeight: 900,
+    boxShadow:
+      "0 8px 16px -6px rgba(45,212,191,0.5), 0 1px 0 rgba(255,255,255,0.4) inset",
   },
   logoText: {
+    fontFamily: "'Space Grotesk', sans-serif",
     fontSize: "clamp(16px, 2vw, 20px)",
-    fontWeight: 800,
-    color: "#fff", // ← FIXED: white text on dark navbar
+    fontWeight: 700,
+    color: "#fff",
+    letterSpacing: "-0.01em",
   },
   navLinks: { display: "flex", gap: 4 },
   navLink: {
     padding: "8px 14px",
     border: "none",
     background: "transparent",
-    color: "#94a3b8", // ← FIXED: light color on dark navbar
+    color: tone.muted,
     fontSize: "clamp(13px, 1.2vw, 15px)",
     cursor: "pointer",
+    borderRadius: 8,
   },
-  navLinkActive: { color: "#0ea5e9", fontWeight: 700 },
+  navLinkActive: {
+    color: tone.teal,
+    fontWeight: 600,
+    background: "rgba(45,212,191,0.08)",
+  },
   navActions: { display: "flex", gap: 8, alignItems: "center" },
   loginBtn: {
     padding: "8px 16px",
     borderRadius: 10,
-    border: "1.5px solid rgba(255,255,255,0.2)",
+    border: "1.5px solid rgba(255,255,255,0.14)",
     background: "transparent",
-    color: "#fff", // ← FIXED
+    color: "#fff",
     fontWeight: 600,
     cursor: "pointer",
     fontSize: 13,
@@ -518,20 +615,21 @@ const s = {
     padding: "8px 16px",
     borderRadius: 10,
     border: "none",
-    background: "#0ea5e9",
-    color: "#fff",
+    background: `linear-gradient(145deg, ${tone.teal}, ${tone.tealDeep})`,
+    color: "#04201c",
     fontWeight: 700,
     cursor: "pointer",
     fontSize: 13,
     whiteSpace: "nowrap",
+    boxShadow: "0 6px 14px -4px rgba(45,212,191,0.5)",
   },
   navUserName: { fontSize: 13, fontWeight: 600, color: "#fff" },
   navRoleBadge: {
     fontSize: 11,
     fontWeight: 700,
     textTransform: "capitalize",
-    background: "#dbeafe",
-    color: "#1e40af",
+    background: "rgba(45,212,191,0.14)",
+    color: tone.teal,
     padding: "3px 10px",
     borderRadius: 20,
   },
@@ -539,8 +637,8 @@ const s = {
     padding: "8px 14px",
     borderRadius: 10,
     border: "none",
-    background: "#0ea5e9",
-    color: "#fff",
+    background: tone.teal,
+    color: "#04201c",
     fontWeight: 700,
     fontSize: 12,
     cursor: "pointer",
@@ -549,22 +647,21 @@ const s = {
   navLogoutBtn: {
     padding: "8px 14px",
     borderRadius: 10,
-    border: "1.5px solid rgba(239,68,68,0.4)",
+    border: "1.5px solid rgba(255,122,122,0.35)",
     background: "transparent",
-    color: "#f87171",
+    color: tone.coral,
     fontWeight: 600,
     fontSize: 12,
     cursor: "pointer",
   },
 
-  // ── Hamburger ──
   hamburger: {
     display: "none",
     alignItems: "center",
     justifyContent: "center",
     width: 40,
     height: 40,
-    border: "1.5px solid rgba(255,255,255,0.3)",
+    border: "1.5px solid rgba(255,255,255,0.16)",
     borderRadius: 10,
     background: "transparent",
     color: "#fff",
@@ -573,20 +670,19 @@ const s = {
     flexShrink: 0,
   },
 
-  // ── Mobile Menu ──
   mobileMenu: {
-    background: "rgba(15,23,42,0.97)",
-    backdropFilter: "blur(12px)",
+    background: "rgba(10,14,23,0.97)",
+    backdropFilter: "blur(14px)",
     padding: "20px 24px",
     display: "flex",
     flexDirection: "column",
     gap: 6,
-    borderTop: "1px solid rgba(255,255,255,0.1)",
+    borderTop: "1px solid rgba(255,255,255,0.08)",
   },
   mobileNavLink: {
     padding: "12px 16px",
     border: "none",
-    background: "rgba(255,255,255,0.05)",
+    background: "rgba(255,255,255,0.04)",
     color: "#e2e8f0",
     fontSize: 15,
     fontWeight: 500,
@@ -596,12 +692,12 @@ const s = {
   },
   mobileDivider: {
     height: 1,
-    background: "rgba(255,255,255,0.1)",
+    background: "rgba(255,255,255,0.08)",
     margin: "8px 0",
   },
   mobileLoginBtn: {
     padding: "12px",
-    border: "1.5px solid rgba(255,255,255,0.2)",
+    border: "1.5px solid rgba(255,255,255,0.16)",
     background: "transparent",
     color: "#fff",
     fontWeight: 600,
@@ -611,8 +707,8 @@ const s = {
   mobileRegisterBtn: {
     padding: "12px",
     border: "none",
-    background: "#0ea5e9",
-    color: "#fff",
+    background: tone.teal,
+    color: "#04201c",
     fontWeight: 700,
     borderRadius: 10,
     cursor: "pointer",
@@ -620,17 +716,17 @@ const s = {
   mobileDashBtn: {
     padding: "12px",
     border: "none",
-    background: "#0ea5e9",
-    color: "#fff",
+    background: tone.teal,
+    color: "#04201c",
     fontWeight: 700,
     borderRadius: 10,
     cursor: "pointer",
   },
   mobileLogoutBtn: {
     padding: "12px",
-    border: "1.5px solid rgba(239,68,68,0.4)",
+    border: "1.5px solid rgba(255,122,122,0.35)",
     background: "transparent",
-    color: "#f87171",
+    color: tone.coral,
     fontWeight: 600,
     borderRadius: 10,
     cursor: "pointer",
@@ -643,23 +739,42 @@ const s = {
     alignItems: "center",
     flexWrap: "wrap",
     position: "relative",
-    background: "#0f172a",
+    background: tone.bg,
     padding:
       "clamp(100px, 12vw, 140px) clamp(20px, 5vw, 60px) clamp(60px, 8vw, 80px)",
     gap: 40,
   },
-  heroBg: {
+  heroOrbTeal: {
     position: "absolute",
-    inset: 0,
+    top: "8%",
+    left: "2%",
+    width: 420,
+    height: 420,
+    borderRadius: "50%",
     background:
-      "radial-gradient(circle at 20% 50%, rgba(14,165,233,0.15), transparent)",
+      "radial-gradient(circle, rgba(45,212,191,0.16), transparent 70%)",
+    filter: "blur(10px)",
+    animation: "driftTeal 14s ease-in-out infinite",
+  },
+  heroOrbCoral: {
+    position: "absolute",
+    bottom: "4%",
+    right: "6%",
+    width: 320,
+    height: 320,
+    borderRadius: "50%",
+    background:
+      "radial-gradient(circle, rgba(255,122,122,0.10), transparent 70%)",
+    filter: "blur(10px)",
+    animation: "driftCoral 17s ease-in-out infinite",
   },
   heroGrid: {
     position: "absolute",
     inset: 0,
     backgroundImage:
-      "radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)",
+      "radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1px)",
     backgroundSize: "40px 40px",
+    maskImage: "linear-gradient(to bottom, black, transparent 85%)",
   },
   heroContent: {
     flex: "1 1 300px",
@@ -667,45 +782,59 @@ const s = {
     zIndex: 1,
     minWidth: 0,
   },
-  heroTag: {
-    display: "inline-block",
-    background: "rgba(14,165,233,0.1)",
-    color: "#38bdf8",
-    padding: "6px 12px",
-    borderRadius: 20,
-    fontSize: 12,
-    marginBottom: 20,
+
+  eyebrow: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    color: tone.muted,
+    fontSize: 13,
+    fontWeight: 500,
+    marginBottom: 18,
   },
+  eyebrowDot: {
+    width: 6,
+    height: 6,
+    borderRadius: "50%",
+    background: tone.teal,
+    boxShadow: `0 0 0 4px rgba(45,212,191,0.15)`,
+  },
+
   heroTitle: {
-    fontSize: "clamp(32px, 6vw, 64px)",
-    fontWeight: 900,
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: "clamp(34px, 6vw, 62px)",
+    fontWeight: 700,
     color: "#fff",
-    lineHeight: 1.1,
+    lineHeight: 1.08,
     marginBottom: 20,
+    letterSpacing: "-0.02em",
   },
-  heroAccent: { color: "#0ea5e9" },
+  heroAccent: { color: tone.teal },
   heroDesc: {
     fontSize: "clamp(14px, 1.5vw, 18px)",
-    color: "#94a3b8",
+    color: tone.muted,
     marginBottom: 30,
     maxWidth: 500,
+    lineHeight: 1.6,
   },
   heroBtns: { display: "flex", gap: 15, marginBottom: 40, flexWrap: "wrap" },
   heroCtaPrimary: {
-    padding: "12px 24px",
-    borderRadius: 10,
+    padding: "13px 26px",
+    borderRadius: 12,
     border: "none",
-    background: "#0ea5e9",
-    color: "#fff",
+    background: `linear-gradient(145deg, ${tone.teal}, ${tone.tealDeep})`,
+    color: "#04201c",
     fontWeight: 700,
     cursor: "pointer",
     fontSize: "clamp(13px, 1.2vw, 15px)",
+    boxShadow:
+      "0 14px 28px -10px rgba(45,212,191,0.45), 0 1px 0 rgba(255,255,255,0.4) inset",
   },
   heroCtaSecondary: {
-    padding: "12px 24px",
-    borderRadius: 10,
-    border: "1px solid #334155",
-    background: "transparent",
+    padding: "13px 26px",
+    borderRadius: 12,
+    border: "1px solid rgba(255,255,255,0.16)",
+    background: "rgba(255,255,255,0.03)",
     color: "#fff",
     cursor: "pointer",
     fontSize: "clamp(13px, 1.2vw, 15px)",
@@ -717,210 +846,313 @@ const s = {
   },
   heroStat: {},
   heroStatVal: {
-    fontSize: "clamp(18px, 2.5vw, 24px)",
-    fontWeight: 800,
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: "clamp(19px, 2.5vw, 26px)",
+    fontWeight: 700,
     color: "#fff",
     display: "block",
   },
-  heroStatLabel: { fontSize: 12, color: "#64748b" },
+  heroStatLabel: { fontSize: 12, color: tone.muted },
+
   heroVisual: {
-    flex: "0 1 300px",
+    flex: "0 1 320px",
     display: "flex",
-    justifyContent: "center",
+    flexDirection: "column",
+    alignItems: "center",
     position: "relative",
     zIndex: 1,
+    perspective: "900px",
   },
   heroCard: {
-    background: "rgba(255,255,255,0.05)",
-    backdropFilter: "blur(10px)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: 15,
-    padding: 20,
-    width: "min(250px, 80vw)",
+    position: "relative",
+    overflow: "hidden",
+    background:
+      "linear-gradient(160deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02))",
+    backdropFilter: "blur(14px)",
+    WebkitBackdropFilter: "blur(14px)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: 20,
+    padding: 22,
+    width: "min(260px, 82vw)",
+    transition: "transform 0.15s ease-out",
+    boxShadow:
+      "0 30px 60px -24px rgba(2,6,15,0.85), 0 1px 0 rgba(255,255,255,0.1) inset",
+  },
+  heroCardShine: {
+    position: "absolute",
+    top: -60,
+    left: -60,
+    width: 140,
+    height: 140,
+    background:
+      "radial-gradient(circle, rgba(255,255,255,0.18), transparent 70%)",
+    pointerEvents: "none",
+  },
+  heroCardFloor: {
+    width: "60%",
+    height: 22,
+    marginTop: 18,
+    borderRadius: "50%",
+    background:
+      "radial-gradient(ellipse, rgba(45,212,191,0.18), transparent 70%)",
+    filter: "blur(4px)",
   },
   heroCardHeader: {
     display: "flex",
     alignItems: "center",
     gap: 8,
-    marginBottom: 15,
+    marginBottom: 16,
+    position: "relative",
   },
-  heroCardDot: {
+  heroCardLiveDot: {
     width: 8,
     height: 8,
     borderRadius: "50%",
-    background: "#10b981",
+    background: tone.teal,
+    boxShadow: `0 0 0 4px rgba(45,212,191,0.18)`,
   },
-  heroCardTitle: { color: "#94a3b8", fontSize: 12 },
+  heroCardTitle: { color: tone.muted, fontSize: 12, fontWeight: 500 },
   heroCardDoctor: {
     display: "flex",
     alignItems: "center",
     gap: 12,
-    marginBottom: 15,
+    marginBottom: 16,
+    position: "relative",
   },
   heroCardAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#fff",
-    fontWeight: 700,
+    color: "#04201c",
+    fontWeight: 800,
     flexShrink: 0,
+    boxShadow: "0 6px 14px -4px rgba(45,212,191,0.5)",
   },
   heroCardName: { color: "#fff", fontSize: 14, fontWeight: 600 },
-  heroCardSpec: { color: "#64748b", fontSize: 12 },
-  heroCardStatus: { color: "#10b981", fontSize: 12, fontWeight: 600 },
+  heroCardSpec: { color: tone.muted, fontSize: 12 },
+  heroCardStatus: {
+    color: tone.teal,
+    fontSize: 12,
+    fontWeight: 600,
+    position: "relative",
+  },
 
   // ── Sections ──
   section: { padding: "clamp(50px, 8vw, 80px) clamp(16px, 4vw, 40px)" },
   sectionInner: { maxWidth: 1200, margin: "0 auto" },
-  sectionTag: {
-    color: "#0ea5e9",
-    fontWeight: 700,
-    fontSize: 12,
-    textTransform: "uppercase",
-    marginBottom: 10,
-    display: "block",
-  },
   sectionTitle: {
-    fontSize: "clamp(24px, 3.5vw, 36px)",
-    fontWeight: 800,
-    color: "#fff", // ← FIXED: white by default
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: "clamp(25px, 3.5vw, 38px)",
+    fontWeight: 700,
+    color: "#fff",
     marginBottom: 40,
+    letterSpacing: "-0.01em",
   },
-  accent: { color: "#0ea5e9" },
+  accent: { color: tone.teal },
 
-  // ── Services ── FIXED: Dark cards
+  // ── Services ──
   serviceGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
     gap: 20,
   },
   serviceCard: {
-    padding: "clamp(20px, 3vw, 30px)",
+    padding: "clamp(24px, 3vw, 30px)",
     borderRadius: 20,
-    border: "1px solid rgba(255,255,255,0.08)",
-    background: "rgba(255,255,255,0.05)", // ← FIXED: dark card
+    border: `1px solid ${tone.glassBorder}`,
+    background: tone.glass,
+    boxShadow: shadowLift,
   },
-  serviceIcon: { fontSize: 40, marginBottom: 20 },
+  serviceIconBadge: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    marginBottom: 20,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background:
+      "linear-gradient(150deg, rgba(45,212,191,0.22), rgba(45,212,191,0.04))",
+    border: "1px solid rgba(45,212,191,0.25)",
+    boxShadow:
+      "0 10px 22px -10px rgba(45,212,191,0.35), 0 1px 0 rgba(255,255,255,0.12) inset",
+  },
+  serviceIconGlyph: { fontSize: 26 },
   serviceTitle: {
+    fontFamily: "'Space Grotesk', sans-serif",
     fontSize: "clamp(16px, 1.5vw, 20px)",
-    fontWeight: 700,
+    fontWeight: 600,
     marginBottom: 10,
-    color: "#fff", // ← FIXED: white text
+    color: "#fff",
   },
-  serviceDesc: { color: "#94a3b8", fontSize: 14, marginBottom: 20 }, // ← FIXED
+  serviceDesc: {
+    color: tone.muted,
+    fontSize: 14,
+    marginBottom: 20,
+    lineHeight: 1.6,
+  },
   serviceBtn: {
     background: "transparent",
     border: "none",
-    color: "#0ea5e9",
+    color: tone.teal,
     fontWeight: 700,
     cursor: "pointer",
+    fontSize: 14,
+    padding: 0,
   },
 
-  // ── Doctors ── FIXED: Dark cards
+  // ── Doctors ──
   doctorGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(190px, 100%), 1fr))",
     gap: 20,
   },
   doctorCard: {
-    background: "rgba(255,255,255,0.05)", // ← FIXED: dark card
-    padding: 20,
+    background: tone.glass,
+    padding: 24,
     borderRadius: 20,
     textAlign: "center",
-    border: "1px solid rgba(255,255,255,0.08)", // ← FIXED
+    border: `1px solid ${tone.glassBorder}`,
+    boxShadow: shadowLift,
+  },
+  doctorAvatarRing: {
+    width: 76,
+    height: 76,
+    borderRadius: "50%",
+    margin: "0 auto 16px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "rgba(255,255,255,0.04)",
+    border: "1px solid rgba(255,255,255,0.1)",
   },
   doctorAvatar: {
     width: 60,
     height: 60,
     borderRadius: "50%",
-    margin: "0 auto 15px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#fff",
+    color: "#04201c",
     fontWeight: 800,
+    boxShadow:
+      "0 10px 20px -8px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.3) inset",
   },
   doctorName: {
+    fontFamily: "'Space Grotesk', sans-serif",
     fontSize: "clamp(14px, 1.2vw, 16px)",
-    fontWeight: 700,
+    fontWeight: 600,
     marginBottom: 5,
-    color: "#fff", // ← FIXED: white text
+    color: "#fff",
   },
-  doctorSpec: { color: "#0ea5e9", fontSize: 13, marginBottom: 15 },
+  doctorSpec: { color: tone.muted, fontSize: 13, marginBottom: 18 },
   doctorBtn: {
     width: "100%",
-    padding: 10,
-    borderRadius: 8,
+    padding: 11,
+    borderRadius: 10,
     border: "none",
-    background: "#0ea5e9", // ← FIXED: blue button
-    color: "#fff",
-    fontWeight: 600,
+    background: `linear-gradient(145deg, ${tone.teal}, ${tone.tealDeep})`,
+    color: "#04201c",
+    fontWeight: 700,
     cursor: "pointer",
     fontSize: "clamp(12px, 1vw, 14px)",
+    boxShadow: "0 8px 16px -6px rgba(45,212,191,0.4)",
   },
 
   // ── Payment ──
   paymentGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, 45%), 1fr))",
-    gap: 15,
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(160px, 45%), 1fr))",
+    gap: 14,
   },
   paymentCard: {
-    background: "rgba(255,255,255,0.05)",
-    padding: 15,
-    borderRadius: 12,
+    background: tone.glass,
+    padding: "14px 16px",
+    borderRadius: 14,
     display: "flex",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
+    border: `1px solid ${tone.glassBorder}`,
   },
-  paymentIcon: { fontSize: 20, flexShrink: 0 },
+  paymentIconBadge: {
+    fontSize: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(255,255,255,0.08)",
+  },
   paymentName: { color: "#fff", fontSize: "clamp(12px, 1vw, 14px)" },
 
-  // ── Contact ── FIXED: Dark theme
+  // ── Contact ──
   contactGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
     gap: "clamp(24px, 4vw, 50px)",
   },
-  contactInfo: { display: "flex", flexDirection: "column", gap: 15 },
-  contactForm: { display: "flex", flexDirection: "column", gap: 15 },
+  contactInfo: { display: "flex", flexDirection: "column", gap: 12 },
+  contactInfoText: { color: tone.muted, lineHeight: 1.6 },
+  contactForm: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 15,
+    background: tone.glass,
+    padding: 24,
+    borderRadius: 20,
+    border: `1px solid ${tone.glassBorder}`,
+    boxShadow: shadowLift,
+  },
   contactInput: {
-    padding: "12px",
-    borderRadius: 8,
-    border: "1px solid rgba(255,255,255,0.15)", // ← FIXED
+    padding: "13px 14px",
+    borderRadius: 10,
+    border: "1px solid rgba(255,255,255,0.1)",
     outline: "none",
     fontSize: 14,
     width: "100%",
     boxSizing: "border-box",
-    background: "rgba(255,255,255,0.08)", // ← FIXED: dark input
-    color: "#fff", // ← FIXED: white text in input
+    background: "rgba(0,0,0,0.22)",
+    color: "#fff",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.3) inset",
   },
   contactBtn: {
-    padding: "12px",
-    borderRadius: 8,
+    padding: "13px",
+    borderRadius: 10,
     border: "none",
-    background: "#0ea5e9", // ← FIXED: blue button
-    color: "#fff",
+    background: `linear-gradient(145deg, ${tone.teal}, ${tone.tealDeep})`,
+    color: "#04201c",
     fontWeight: 700,
     cursor: "pointer",
+    boxShadow: "0 10px 20px -8px rgba(45,212,191,0.45)",
   },
   successBox: {
-    background: "#d1fae5",
-    color: "#065f46",
+    background: "rgba(52,211,153,0.14)",
+    border: "1px solid rgba(52,211,153,0.3)",
+    color: "#6ee7b7",
     padding: 10,
     borderRadius: 8,
-    marginBottom: 10,
+    marginBottom: 4,
+    fontSize: 13,
   },
 
   // ── Footer ──
   footer: {
-    background: "#0a0f1e",
+    background: "#070A11",
     padding: "clamp(24px, 4vw, 40px)",
     textAlign: "center",
+    borderTop: "1px solid rgba(255,255,255,0.05)",
   },
   footerInner: {},
-  footerCopy: { color: "#64748b", fontSize: 12, marginTop: 10 },
+  footerLogo: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    color: "#fff",
+    fontWeight: 700,
+  },
+  footerCopy: { color: "#5B6B80", fontSize: 12, marginTop: 10 },
 };
