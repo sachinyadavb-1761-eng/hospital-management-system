@@ -1,17 +1,38 @@
+// src/pages/StaffLogin.jsx
+//
+// FIXES applied:
+// 1. Was calling `authAPI.login(form)` — the PATIENT login endpoint
+//    (/auth/login). Staff (admin/doctor) should hit the dedicated
+//    endpoint that's already defined in services/api.js:
+//    `authAPI.loginStaff` -> POST /auth/staff-login. Switched to that.
+// 2. Was writing directly to localStorage.setItem("token"/"user", ...)
+//    instead of using the shared `setAuthData()` util (like every other
+//    login page in the app does). Switched to setAuthData for consistency
+//    and so any side effects it has (axios headers, etc.) actually run.
+// 3. Redesigned the UI to match the rest of the app's dark-navy glass +
+//    Space Grotesk look (violet accent, since this is a restricted/staff
+//    area — same accent family as AdminLogin).
+//
+// Logic/behavior otherwise unchanged: still only allows role "admin" or
+// "doctor", still redirects to the right dashboard.
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authAPI } from "../services/api";
+import { setAuthData } from "../utils/auth";
 
 export default function StaffLogin() {
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-  });
-
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+    setError("");
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,20 +40,20 @@ export default function StaffLogin() {
     setLoading(true);
 
     try {
-      const res = await authAPI.login(form);
+      // FIX: use the dedicated staff-login endpoint, not the patient one
+      const res = await authAPI.loginStaff(form);
       const { token, user } = res.data;
 
-      // ✅ Allow only admin & doctor
+      // Allow only admin & doctor
       if (user.role !== "admin" && user.role !== "doctor") {
         setError("Access Denied: Not a staff member.");
+        setLoading(false);
         return;
       }
 
-      // ✅ Save only if valid staff
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
+      // FIX: use the shared auth util instead of raw localStorage writes
+      setAuthData(token, user);
 
-      // ✅ Redirect
       if (user.role === "admin") {
         navigate("/admin");
       } else {
@@ -46,71 +67,346 @@ export default function StaffLogin() {
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        height: "100vh",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "#0f172a",
-      }}
-    >
-      <div
-        style={{
-          background: "#1e293b",
-          padding: 40,
-          borderRadius: 20,
-          width: 400,
-          color: "#fff",
-        }}
-      >
-        <h2 style={{ textAlign: "center" }}>🛡️ Staff Portal</h2>
-        <p style={{ textAlign: "center", color: "#94a3b8", marginBottom: 20 }}>
-          Doctors & Admins Only
-        </p>
+    <div style={s.page}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+        * { box-sizing: border-box; }
+        ::placeholder { color: #5B6B80; }
+        @media (max-width: 900px) {
+          .staff-left { display: none !important; }
+          .staff-right { padding: 24px 16px !important; }
+        }
+        .staff-card { animation: floatIn 0.5s ease; }
+        @keyframes floatIn { from{opacity:0;transform:translateY(14px) scale(0.98)} to{opacity:1;transform:translateY(0) scale(1)} }
+        @keyframes driftA { 0%,100%{transform:translate(0,0)} 50%{transform:translate(18px,-20px)} }
+        .in-focus:focus { border-color: rgba(167,139,250,0.55) !important; box-shadow: 0 0 0 4px rgba(167,139,250,0.12), 0 2px 6px rgba(0,0,0,0.3) inset !important; }
+      `}</style>
 
-        {error && (
-          <div style={{ color: "#ef4444", marginBottom: 15 }}>{error}</div>
-        )}
+      {/* LEFT */}
+      <div style={s.left} className="staff-left">
+        <div style={s.orbA} />
+        <div style={s.grid} />
+        <div style={s.brand}>
+          <div style={s.brandIcon}>🛡️</div>
+          <span style={s.brandName}>MediCore</span>
+        </div>
+        <div style={s.heroText}>
+          <div style={s.eyebrow}>
+            <span style={s.eyebrowDot} />
+            Restricted Access
+          </div>
+          <h1 style={s.heroHeading}>
+            Staff <span style={s.accent}>Portal</span>
+          </h1>
+          <p style={s.heroSub}>
+            Sign in with your doctor or admin account to reach the internal
+            workspace.
+          </p>
+        </div>
+        <div style={s.features}>
+          {[
+            ["🩺", "Doctors → clinical dashboard"],
+            ["🏥", "Admins → management console"],
+          ].map(([icon, text]) => (
+            <div key={text} style={s.featureItem}>
+              <span style={s.featureIcon}>{icon}</span>
+              <span style={s.featureText}>{text}</span>
+            </div>
+          ))}
+        </div>
+      </div>
 
-        <form
-          onSubmit={handleSubmit}
-          style={{ display: "flex", flexDirection: "column", gap: 15 }}
-        >
-          <input
-            type="email"
-            placeholder="Staff Email"
-            required
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            style={{ padding: 12, borderRadius: 8, border: "none" }}
-          />
+      {/* RIGHT */}
+      <div style={s.right} className="staff-right">
+        <div style={s.card} className="staff-card">
+          <div style={s.cardBadge}>Doctors &amp; Admins Only</div>
+          <h2 style={s.cardTitle}>Staff Sign In</h2>
+          <p style={s.cardSub}>Enter your workspace credentials.</p>
 
-          <input
-            type="password"
-            placeholder="Password"
-            required
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            style={{ padding: 12, borderRadius: 8, border: "none" }}
-          />
+          {error && <div style={s.errorBox}>⚠ {error}</div>}
 
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              padding: 12,
-              background: "#0ea5e9",
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
-              fontWeight: "bold",
-              cursor: "pointer",
-              opacity: loading ? 0.6 : 1,
-            }}
-          >
-            {loading ? "Logging in..." : "Login to Workspace"}
-          </button>
-        </form>
+          <form onSubmit={handleSubmit} style={s.form}>
+            <div style={s.field}>
+              <label style={s.label}>Staff Email</label>
+              <input
+                style={s.input}
+                className="in-focus"
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="staff@hospital.com"
+                required
+              />
+            </div>
+
+            <div style={s.field}>
+              <label style={s.label}>Password</label>
+              <div style={s.passwordWrap}>
+                <input
+                  style={s.inputPassword}
+                  className="in-focus"
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="••••••••"
+                  required
+                />
+                <button
+                  type="button"
+                  style={s.eyeBtn}
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? "🙈" : "👁"}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              style={{ ...s.btn, ...(loading ? s.btnDisabled : {}) }}
+              disabled={loading}
+            >
+              {loading ? "Logging in…" : "Login to Workspace"}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
 }
+
+const tone = {
+  bg: "#0A0E17",
+  glass: "rgba(255,255,255,0.045)",
+  glassBorder: "rgba(255,255,255,0.09)",
+  text: "#EEF2F7",
+  muted: "#8CA0B8",
+  violet: "#A78BFA",
+  violetDeep: "#6D28D9",
+};
+
+const s = {
+  page: {
+    display: "flex",
+    minHeight: "100vh",
+    fontFamily: "'Inter', sans-serif",
+    background: tone.bg,
+    position: "relative",
+    color: tone.text,
+  },
+  left: {
+    flex: 1,
+    position: "relative",
+    overflow: "hidden",
+    background: `linear-gradient(160deg, ${tone.bg} 0%, #121a2c 100%)`,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    padding: "clamp(32px, 4vw, 52px)",
+    borderRight: `1px solid ${tone.glassBorder}`,
+  },
+  orbA: {
+    position: "absolute",
+    top: "8%",
+    left: "0%",
+    width: 380,
+    height: 380,
+    borderRadius: "50%",
+    background:
+      "radial-gradient(circle, rgba(167,139,250,0.18), transparent 70%)",
+    filter: "blur(10px)",
+    animation: "driftA 15s ease-in-out infinite",
+  },
+  grid: {
+    position: "absolute",
+    inset: 0,
+    backgroundImage:
+      "radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1px)",
+    backgroundSize: "38px 38px",
+    maskImage: "linear-gradient(to bottom, black, transparent 88%)",
+  },
+  brand: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    position: "relative",
+    zIndex: 1,
+  },
+  brandIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    background: `linear-gradient(145deg, ${tone.violet}, ${tone.violetDeep})`,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 18,
+    boxShadow:
+      "0 8px 16px -6px rgba(167,139,250,0.5), 0 1px 0 rgba(255,255,255,0.4) inset",
+  },
+  brandName: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: 21,
+    fontWeight: 700,
+    color: "#fff",
+  },
+  heroText: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    position: "relative",
+    zIndex: 1,
+  },
+  eyebrow: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    color: tone.muted,
+    fontSize: 13,
+    fontWeight: 500,
+    marginBottom: 16,
+    width: "fit-content",
+  },
+  eyebrowDot: {
+    width: 6,
+    height: 6,
+    borderRadius: "50%",
+    background: tone.violet,
+    boxShadow: "0 0 0 4px rgba(167,139,250,0.15)",
+  },
+  heroHeading: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: "clamp(30px, 3.6vw, 46px)",
+    fontWeight: 700,
+    lineHeight: 1.1,
+    marginBottom: 16,
+    color: "#fff",
+    letterSpacing: "-0.02em",
+  },
+  accent: { color: tone.violet },
+  heroSub: { fontSize: 15, color: tone.muted, maxWidth: 380, lineHeight: 1.6 },
+  features: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+    position: "relative",
+    zIndex: 1,
+  },
+  featureItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    background: tone.glass,
+    borderRadius: 12,
+    padding: "12px 14px",
+    border: `1px solid ${tone.glassBorder}`,
+    boxShadow: "0 14px 28px -18px rgba(2,6,15,0.7)",
+  },
+  featureIcon: { fontSize: 18 },
+  featureText: { fontSize: 13.5, fontWeight: 500, color: "#cbd5e1" },
+
+  right: {
+    flex: 1,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 40,
+    position: "relative",
+    background: tone.bg,
+  },
+  card: {
+    background:
+      "linear-gradient(160deg, rgba(255,255,255,0.055), rgba(255,255,255,0.015))",
+    backdropFilter: "blur(14px)",
+    WebkitBackdropFilter: "blur(14px)",
+    borderRadius: 22,
+    padding: "42px 40px",
+    width: "100%",
+    maxWidth: 420,
+    border: `1px solid ${tone.glassBorder}`,
+    boxShadow:
+      "0 30px 60px -24px rgba(2,6,15,0.85), 0 1px 0 rgba(255,255,255,0.07) inset",
+  },
+  cardBadge: {
+    display: "inline-block",
+    background: "rgba(167,139,250,0.14)",
+    color: tone.violet,
+    fontSize: 12,
+    fontWeight: 700,
+    padding: "4px 12px",
+    borderRadius: 20,
+    marginBottom: 16,
+  },
+  cardTitle: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: 25,
+    fontWeight: 700,
+    color: "#fff",
+    margin: "0 0 4px",
+  },
+  cardSub: { color: tone.muted, marginBottom: 24, fontSize: 14 },
+  errorBox: {
+    background: "rgba(255,122,122,0.1)",
+    border: "1px solid rgba(255,122,122,0.3)",
+    color: "#ffb4b4",
+    borderRadius: 10,
+    padding: "10px 12px",
+    marginBottom: 16,
+    fontSize: 13,
+  },
+  form: { display: "flex", flexDirection: "column", gap: 18 },
+  field: { display: "flex", flexDirection: "column", gap: 6 },
+  label: { fontSize: 13, fontWeight: 600, color: "#cbd5e1" },
+  input: {
+    padding: "12px 14px",
+    borderRadius: 10,
+    border: "1px solid rgba(255,255,255,0.1)",
+    fontSize: 14,
+    outline: "none",
+    width: "100%",
+    background: "rgba(0,0,0,0.22)",
+    color: "#fff",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.3) inset",
+    transition: "all 0.2s",
+  },
+  passwordWrap: { position: "relative", display: "flex", alignItems: "center" },
+  inputPassword: {
+    padding: "12px 44px 12px 14px",
+    borderRadius: 10,
+    border: "1px solid rgba(255,255,255,0.1)",
+    fontSize: 14,
+    outline: "none",
+    width: "100%",
+    background: "rgba(0,0,0,0.22)",
+    color: "#fff",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.3) inset",
+    transition: "all 0.2s",
+  },
+  eyeBtn: {
+    position: "absolute",
+    right: 12,
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    fontSize: 16,
+    color: tone.muted,
+  },
+  btn: {
+    marginTop: 6,
+    padding: "14px",
+    borderRadius: 12,
+    border: "none",
+    background: `linear-gradient(145deg, ${tone.violet}, ${tone.violetDeep})`,
+    color: "#1a0f33",
+    fontWeight: 700,
+    fontSize: 15,
+    cursor: "pointer",
+    boxShadow:
+      "0 14px 28px -10px rgba(167,139,250,0.45), 0 1px 0 rgba(255,255,255,0.4) inset",
+  },
+  btnDisabled: { opacity: 0.6, cursor: "not-allowed" },
+};

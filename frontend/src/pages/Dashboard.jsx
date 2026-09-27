@@ -1,3 +1,11 @@
+// src/pages/Dashboard.jsx (Admin)
+// Redesign notes:
+// 1. Same logic, state, API calls, CRUD flows — only presentation layer changed.
+// 2. Dark glass sidebar (matches auth pages) + soft off-white content area
+//    with embossed 3D card shadows — keeps dense tables readable while
+//    staying visually consistent with the rest of the app.
+// 3. Space Grotesk headings, teal accent, rounded generous corners.
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -61,7 +69,7 @@ export default function Dashboard() {
   const [formData, setFormData] = useState({});
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
-  const [defaultPasswordMsg, setDefaultPasswordMsg] = useState(""); // ✅ NEW
+  const [defaultPasswordMsg, setDefaultPasswordMsg] = useState("");
 
   useEffect(() => {
     fetchAll();
@@ -103,7 +111,7 @@ export default function Dashboard() {
             : APPT_INIT;
     setFormData(init);
     setFormError("");
-    setDefaultPasswordMsg(""); // ✅ NEW
+    setDefaultPasswordMsg("");
     setModal({ type, mode: "add" });
   };
 
@@ -118,7 +126,7 @@ export default function Dashboard() {
     }
     setFormData(editData);
     setFormError("");
-    setDefaultPasswordMsg(""); // ✅ NEW
+    setDefaultPasswordMsg("");
     setModal({ type, mode: "edit" });
   };
 
@@ -126,7 +134,7 @@ export default function Dashboard() {
     setModal(null);
     setFormData({});
     setFormError("");
-    setDefaultPasswordMsg(""); // ✅ NEW
+    setDefaultPasswordMsg("");
   };
 
   const handleSave = async () => {
@@ -159,14 +167,13 @@ export default function Dashboard() {
 
         if (mode === "add") {
           const res = await api.create(payload);
-          // ✅ Doctor add hone pe default password dikhao
           if (type === "doctor" && res.data?.defaultPassword) {
             setDefaultPasswordMsg(
               `✅ Doctor added! Default Login Password: ${res.data.defaultPassword}`,
             );
             await fetchAll();
             setSaving(false);
-            return; // Modal band mat karo — password dikhao
+            return;
           }
         } else {
           await api.update(payload._id, payload);
@@ -216,38 +223,49 @@ export default function Dashboard() {
     {
       label: "Total Doctors",
       value: doctors.length,
-      color: "#1a73e8",
+      color: "#2DD4BF",
       icon: "🩺",
     },
     {
       label: "Departments",
       value: departments.length,
-      color: "#8b5cf6",
+      color: "#A78BFA",
       icon: "🏥",
     },
     {
       label: "Total Patients",
       value: patients.length,
-      color: "#10b981",
+      color: "#34D399",
       icon: "👤",
     },
     {
       label: "Appointments",
       value: appointments.length,
-      color: "#f59e0b",
+      color: "#FBBF24",
       icon: "📅",
     },
   ];
 
-  // Doctor count per department
   const doctorCountByDept = (deptId) =>
     doctors.filter((d) => (d.department?._id || d.department) === deptId)
       .length;
 
   return (
     <div style={s.shell}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+        * { box-sizing: border-box; }
+        body, .shell-root { font-family: 'Inter', sans-serif; }
+        .lift:hover { transform: translateY(-3px); box-shadow: 0 20px 40px -18px rgba(15,23,42,0.18) !important; }
+        .lift { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .nav-btn:hover { background: rgba(255,255,255,0.06) !important; color: #fff !important; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+      `}</style>
+
       {/* ── Sidebar ── */}
       <aside style={s.sidebar}>
+        <div style={s.sidebarGlow} />
         <div style={s.logo}>
           <span style={s.logoIcon}>✚</span>
           <span style={s.logoText}>MediCore</span>
@@ -256,6 +274,7 @@ export default function Dashboard() {
           {NAV.map(({ key, icon, label }) => (
             <button
               key={key}
+              className="nav-btn"
               style={{ ...s.navBtn, ...(activeTab === key ? s.navActive : {}) }}
               onClick={() => setActiveTab(key)}
             >
@@ -287,7 +306,7 @@ export default function Dashboard() {
             </h1>
             <p style={s.pageDate}>{new Date().toDateString()}</p>
           </div>
-          <div style={{ display: "flex", gap: 10 }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             {activeTab === "departments" && (
               <AddBtn
                 onClick={() => openAdd("department")}
@@ -321,10 +340,8 @@ export default function Dashboard() {
               <div>
                 <div style={s.statGrid}>
                   {stats.map(({ label, value, color, icon }) => (
-                    <div
-                      key={label}
-                      style={{ ...s.statCard, borderTop: `4px solid ${color}` }}
-                    >
+                    <div key={label} style={s.statCard} className="lift">
+                      <div style={{ ...s.statAccent, background: color }} />
                       <div style={s.statIcon}>{icon}</div>
                       <div style={{ ...s.statVal, color }}>{value}</div>
                       <div style={s.statLabel}>{label}</div>
@@ -366,7 +383,7 @@ export default function Dashboard() {
                   departments.map((dept) => {
                     const count = doctorCountByDept(dept._id);
                     return (
-                      <div key={dept._id} style={s.deptCard}>
+                      <div key={dept._id} style={s.deptCard} className="lift">
                         <div style={s.deptIconWrap}>{dept.icon || "🏥"}</div>
                         <div style={s.deptInfo}>
                           <div style={s.deptName}>{dept.name}</div>
@@ -458,7 +475,6 @@ export default function Dashboard() {
                       );
                     })
                   : null}
-                {/* Doctors with no department */}
                 {(() => {
                   const unassigned = doctors.filter((d) => !d.department);
                   if (unassigned.length === 0) return null;
@@ -591,10 +607,8 @@ export default function Dashboard() {
               </button>
             </div>
 
-            {/* ✅ Error message */}
             {formError && <div style={s.errorBox}>⚠ {formError}</div>}
 
-            {/* ✅ Default password success message */}
             {defaultPasswordMsg && (
               <div style={s.successBox}>
                 <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>
@@ -608,7 +622,6 @@ export default function Dashboard() {
             )}
 
             <div style={s.modalBody}>
-              {/* Department Form */}
               {modal.type === "department" && (
                 <>
                   <FormRow>
@@ -657,7 +670,6 @@ export default function Dashboard() {
                 </>
               )}
 
-              {/* Doctor Form */}
               {modal.type === "doctor" && (
                 <>
                   <FormRow>
@@ -732,7 +744,6 @@ export default function Dashboard() {
                 </>
               )}
 
-              {/* Patient Form */}
               {modal.type === "patient" && (
                 <>
                   <FormRow>
@@ -801,7 +812,6 @@ export default function Dashboard() {
                 </>
               )}
 
-              {/* Appointment Form */}
               {modal.type === "appointment" && (
                 <>
                   <FormRow>
@@ -888,7 +898,6 @@ export default function Dashboard() {
               <button style={s.cancelBtn} onClick={closeModal}>
                 Cancel
               </button>
-              {/* ✅ Doctor add hone ke baad "Close" button dikhao */}
               {defaultPasswordMsg ? (
                 <button style={s.saveBtn} onClick={closeModal}>
                   Close
@@ -944,7 +953,11 @@ export default function Dashboard() {
                 Cancel
               </button>
               <button
-                style={{ ...s.saveBtn, background: "#ef4444" }}
+                style={{
+                  ...s.saveBtn,
+                  background: "#ef4444",
+                  boxShadow: "0 10px 20px -8px rgba(239,68,68,0.45)",
+                }}
                 onClick={handleDelete}
                 disabled={saving}
               >
@@ -1014,7 +1027,7 @@ function FormField({
         onChange={onChange}
         placeholder={placeholder}
         style={s.input}
-        onFocus={(e) => (e.target.style.borderColor = "#1a73e8")}
+        onFocus={(e) => (e.target.style.borderColor = "#2DD4BF")}
         onBlur={(e) => (e.target.style.borderColor = "#e2e8f0")}
       />
     </div>
@@ -1087,65 +1100,103 @@ function StatusBadge({ status }) {
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
+const tone = {
+  navy: "#0A0E17",
+  navyPanel: "#0D1420",
+  teal: "#2DD4BF",
+  tealDeep: "#0F766E",
+};
+
 const s = {
   shell: {
     display: "flex",
     minHeight: "100vh",
-    fontFamily: "'Segoe UI', sans-serif",
-    background: "#f8fafc",
+    fontFamily: "'Inter', sans-serif",
+    background: "#F3F6FA",
   },
   sidebar: {
-    width: 240,
-    background: "#0f172a",
+    width: 250,
+    background: `linear-gradient(180deg, ${tone.navy} 0%, #0c1220 100%)`,
     display: "flex",
     flexDirection: "column",
-    padding: "28px 16px",
+    padding: "28px 18px",
     position: "sticky",
     top: 0,
     height: "100vh",
+    position: "relative",
+    overflow: "hidden",
+    borderRight: "1px solid rgba(255,255,255,0.06)",
+  },
+  sidebarGlow: {
+    position: "absolute",
+    top: -80,
+    left: -60,
+    width: 260,
+    height: 260,
+    borderRadius: "50%",
+    background:
+      "radial-gradient(circle, rgba(45,212,191,0.14), transparent 70%)",
+    filter: "blur(6px)",
+    pointerEvents: "none",
   },
   logo: {
     display: "flex",
     alignItems: "center",
     gap: 10,
-    padding: "0 8px 32px",
+    padding: "0 8px 28px",
     borderBottom: "1px solid rgba(255,255,255,0.08)",
-    marginBottom: 24,
+    marginBottom: 22,
+    position: "relative",
+    zIndex: 1,
   },
   logoIcon: {
-    fontSize: 22,
-    background: "#1a73e8",
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    fontSize: 20,
+    background: `linear-gradient(145deg, ${tone.teal}, ${tone.tealDeep})`,
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontWeight: "bold",
-    color: "#fff",
+    color: "#04201c",
+    boxShadow:
+      "0 8px 16px -6px rgba(45,212,191,0.5), 0 1px 0 rgba(255,255,255,0.4) inset",
   },
   logoText: {
     color: "#fff",
     fontSize: 18,
     fontWeight: 700,
-    letterSpacing: "-0.3px",
+    fontFamily: "'Space Grotesk', sans-serif",
   },
-  nav: { display: "flex", flexDirection: "column", gap: 4, flex: 1 },
+  nav: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    flex: 1,
+    position: "relative",
+    zIndex: 1,
+  },
   navBtn: {
     display: "flex",
     alignItems: "center",
     gap: 10,
     padding: "11px 14px",
-    borderRadius: 10,
+    borderRadius: 11,
     border: "none",
     background: "transparent",
-    color: "#94a3b8",
+    color: "#8CA0B8",
     fontSize: 14,
     fontWeight: 500,
     cursor: "pointer",
     textAlign: "left",
+    transition: "all 0.2s",
   },
-  navActive: { background: "#1e293b", color: "#fff" },
+  navActive: {
+    background: "rgba(45,212,191,0.12)",
+    color: "#fff",
+    boxShadow: "inset 3px 0 0 #2DD4BF",
+  },
   navIcon: { fontSize: 16 },
   sideFooter: {
     borderTop: "1px solid rgba(255,255,255,0.08)",
@@ -1153,14 +1204,16 @@ const s = {
     display: "flex",
     flexDirection: "column",
     gap: 12,
+    position: "relative",
+    zIndex: 1,
   },
   userBadge: { display: "flex", alignItems: "center", gap: 10 },
   avatar: {
     width: 36,
     height: 36,
     borderRadius: "50%",
-    background: "#1a73e8",
-    color: "#fff",
+    background: `linear-gradient(145deg, ${tone.teal}, ${tone.tealDeep})`,
+    color: "#04201c",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -1168,31 +1221,34 @@ const s = {
     fontSize: 15,
   },
   userName: { color: "#e2e8f0", fontSize: 13, fontWeight: 600 },
-  userRole: { color: "#64748b", fontSize: 12 },
+  userRole: { color: "#64748b", fontSize: 12, textTransform: "capitalize" },
   logoutBtn: {
     padding: "9px 14px",
-    borderRadius: 8,
-    border: "1px solid #1e293b",
+    borderRadius: 9,
+    border: "1px solid rgba(255,122,122,0.3)",
     background: "transparent",
-    color: "#ef4444",
+    color: "#FF7A7A",
     fontSize: 13,
     cursor: "pointer",
     fontWeight: 600,
     textAlign: "left",
   },
-  main: { flex: 1, padding: "36px 40px", maxWidth: "calc(100vw - 240px)" },
+  main: { flex: 1, padding: "36px 40px", maxWidth: "calc(100vw - 250px)" },
   header: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 32,
+    flexWrap: "wrap",
+    gap: 16,
   },
   pageTitle: {
     margin: 0,
-    fontSize: 26,
+    fontSize: 27,
     fontWeight: 800,
     color: "#0f172a",
-    letterSpacing: "-0.5px",
+    letterSpacing: "-0.02em",
+    fontFamily: "'Space Grotesk', sans-serif",
   },
   pageDate: { color: "#94a3b8", fontSize: 13, margin: "4px 0 0" },
   refreshBtn: {
@@ -1209,11 +1265,12 @@ const s = {
     padding: "9px 18px",
     borderRadius: 10,
     border: "none",
-    background: "#1a73e8",
-    color: "#fff",
+    background: `linear-gradient(145deg, ${tone.teal}, ${tone.tealDeep})`,
+    color: "#04201c",
     fontSize: 14,
-    fontWeight: 600,
+    fontWeight: 700,
     cursor: "pointer",
+    boxShadow: "0 10px 20px -8px rgba(45,212,191,0.4)",
   },
   loader: { textAlign: "center", padding: 80, color: "#94a3b8", fontSize: 16 },
   emptyState: {
@@ -1230,18 +1287,28 @@ const s = {
   },
   statCard: {
     background: "#fff",
-    borderRadius: 16,
-    padding: "24px 20px",
-    boxShadow: "0 1px 6px rgba(0,0,0,0.07)",
+    borderRadius: 18,
+    padding: "26px 22px",
+    position: "relative",
+    overflow: "hidden",
+    boxShadow: "0 14px 32px -18px rgba(15,23,42,0.14)",
+    border: "1px solid #eef2f7",
   },
+  statAccent: { position: "absolute", top: 0, left: 0, right: 0, height: 4 },
   statIcon: { fontSize: 26, marginBottom: 10 },
-  statVal: { fontSize: 36, fontWeight: 800, lineHeight: 1 },
+  statVal: {
+    fontSize: 36,
+    fontWeight: 800,
+    lineHeight: 1,
+    fontFamily: "'Space Grotesk', sans-serif",
+  },
   statLabel: { color: "#64748b", fontSize: 13, marginTop: 4 },
   sectionTitle: {
     fontSize: 17,
     fontWeight: 700,
     color: "#0f172a",
     marginBottom: 16,
+    fontFamily: "'Space Grotesk', sans-serif",
   },
   deptGrid: {
     display: "grid",
@@ -1250,20 +1317,20 @@ const s = {
   },
   deptCard: {
     background: "#fff",
-    borderRadius: 16,
+    borderRadius: 18,
     padding: "20px 20px",
-    boxShadow: "0 1px 6px rgba(0,0,0,0.07)",
+    boxShadow: "0 14px 32px -18px rgba(15,23,42,0.14)",
     display: "flex",
     alignItems: "flex-start",
     gap: 16,
-    border: "1.5px solid #f1f5f9",
+    border: "1px solid #eef2f7",
   },
   deptIconWrap: {
-    fontSize: 32,
+    fontSize: 30,
     minWidth: 52,
     height: 52,
     borderRadius: 14,
-    background: "#f0f4ff",
+    background: "rgba(45,212,191,0.1)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -1279,8 +1346,8 @@ const s = {
   deptCount: {},
   deptCountBadge: {
     display: "inline-block",
-    background: "#dbeafe",
-    color: "#1e40af",
+    background: "rgba(45,212,191,0.12)",
+    color: "#0F766E",
     fontSize: 12,
     fontWeight: 600,
     padding: "3px 10px",
@@ -1297,6 +1364,7 @@ const s = {
     marginBottom: 12,
     padding: "10px 0",
     borderBottom: "2px solid #e2e8f0",
+    fontFamily: "'Space Grotesk', sans-serif",
   },
   deptGroupCount: {
     fontSize: 12,
@@ -1308,9 +1376,10 @@ const s = {
   },
   tableWrap: {
     background: "#fff",
-    borderRadius: 16,
+    borderRadius: 18,
     overflow: "hidden",
-    boxShadow: "0 1px 6px rgba(0,0,0,0.07)",
+    boxShadow: "0 14px 32px -18px rgba(15,23,42,0.14)",
+    border: "1px solid #eef2f7",
   },
   table: { width: "100%", borderCollapse: "collapse" },
   th: {
@@ -1331,7 +1400,7 @@ const s = {
     borderBottom: "1px solid #f1f5f9",
   },
   rowEven: { background: "#fff" },
-  rowOdd: { background: "#fafafa" },
+  rowOdd: { background: "#fafbfd" },
   emptyCell: {
     padding: "48px",
     textAlign: "center",
@@ -1340,17 +1409,17 @@ const s = {
   },
   editBtn: {
     padding: "5px 12px",
-    borderRadius: 6,
+    borderRadius: 7,
     border: "1.5px solid #e2e8f0",
     background: "#fff",
-    color: "#1a73e8",
+    color: "#0F766E",
     fontSize: 12,
     fontWeight: 600,
     cursor: "pointer",
   },
   deleteBtn: {
     padding: "5px 12px",
-    borderRadius: 6,
+    borderRadius: 7,
     border: "1.5px solid #fee2e2",
     background: "#fff",
     color: "#ef4444",
@@ -1361,7 +1430,8 @@ const s = {
   overlay: {
     position: "fixed",
     inset: 0,
-    background: "rgba(0,0,0,0.45)",
+    background: "rgba(10,14,23,0.6)",
+    backdropFilter: "blur(2px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -1370,10 +1440,10 @@ const s = {
   },
   modal: {
     background: "#fff",
-    borderRadius: 20,
+    borderRadius: 22,
     width: "100%",
     maxWidth: 600,
-    boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+    boxShadow: "0 30px 70px rgba(0,0,0,0.35)",
     maxHeight: "90vh",
     overflowY: "auto",
   },
@@ -1384,7 +1454,13 @@ const s = {
     padding: "20px 24px",
     borderBottom: "1px solid #f1f5f9",
   },
-  modalTitle: { margin: 0, fontSize: 18, fontWeight: 700, color: "#0f172a" },
+  modalTitle: {
+    margin: 0,
+    fontSize: 18,
+    fontWeight: 700,
+    color: "#0f172a",
+    fontFamily: "'Space Grotesk', sans-serif",
+  },
   modalClose: {
     background: "none",
     border: "none",
@@ -1415,7 +1491,6 @@ const s = {
     fontSize: 13,
     fontWeight: 500,
   },
-  // ✅ NEW - Success box for default password
   successBox: {
     margin: "12px 24px 0",
     background: "#d1fae5",
@@ -1429,7 +1504,7 @@ const s = {
   label: { fontSize: 13, fontWeight: 600, color: "#374151" },
   input: {
     padding: "10px 13px",
-    borderRadius: 8,
+    borderRadius: 9,
     border: "1.5px solid #e2e8f0",
     fontSize: 14,
     color: "#0f172a",
@@ -1439,7 +1514,7 @@ const s = {
   },
   select: {
     padding: "10px 13px",
-    borderRadius: 8,
+    borderRadius: 9,
     border: "1.5px solid #e2e8f0",
     fontSize: 14,
     color: "#0f172a",
@@ -1448,7 +1523,7 @@ const s = {
   },
   cancelBtn: {
     padding: "10px 20px",
-    borderRadius: 8,
+    borderRadius: 9,
     border: "1.5px solid #e2e8f0",
     background: "#fff",
     color: "#475569",
@@ -1458,12 +1533,13 @@ const s = {
   },
   saveBtn: {
     padding: "10px 24px",
-    borderRadius: 8,
+    borderRadius: 9,
     border: "none",
-    background: "#1a73e8",
-    color: "#fff",
+    background: `linear-gradient(145deg, ${tone.teal}, ${tone.tealDeep})`,
+    color: "#04201c",
     fontSize: 14,
-    fontWeight: 600,
+    fontWeight: 700,
     cursor: "pointer",
+    boxShadow: "0 10px 20px -8px rgba(45,212,191,0.4)",
   },
 };

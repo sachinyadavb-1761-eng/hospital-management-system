@@ -1,8 +1,7 @@
 // src/pages/DoctorLogin.jsx
-// Changes:
-// 1. Password eye icon — show/hide toggle
-// 2. useLanguage — translations
-// 3. Responsive — mobile friendly
+// Redesign: same logic/hooks/API — only presentation layer changed.
+// Visual language matches Home.jsx: deep-navy glass + embossed 3D shadows.
+// Doctor area uses an emerald accent (kept close to original green identity).
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -71,66 +70,76 @@ export default function DoctorLogin() {
   };
 
   return (
-    <div style={styles.page}>
-      {/* Responsive styles */}
+    <div style={s.page}>
       <style>{`
-        @media (max-width: 640px) {
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+        * { box-sizing: border-box; }
+        ::placeholder { color: #5B6B80; }
+        @media (max-width: 900px) {
           .doctor-left { display: none !important; }
           .doctor-right { padding: 24px 16px !important; }
-          .doctor-card { padding: 28px 20px !important; }
           .doctor-row { grid-template-columns: 1fr !important; }
         }
-        @media (max-width: 900px) {
-          .doctor-left { flex: 0 0 42% !important; padding: 32px 24px !important; }
-        }
+        .doctor-card { animation: floatIn 0.5s ease; }
+        @keyframes floatIn { from{opacity:0;transform:translateY(14px) scale(0.98)} to{opacity:1;transform:translateY(0) scale(1)} }
+        @keyframes driftA { 0%,100%{transform:translate(0,0)} 50%{transform:translate(18px,-20px)} }
+        @keyframes driftB { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-14px,16px)} }
+        .in-focus:focus { border-color: rgba(52,211,153,0.55) !important; box-shadow: 0 0 0 4px rgba(52,211,153,0.12), 0 2px 6px rgba(0,0,0,0.3) inset !important; }
       `}</style>
 
       {/* LEFT */}
-      <div style={styles.left} className="doctor-left">
-        <div style={styles.brand}>
-          <div style={styles.brandIcon}>🩺</div>
-          <span style={styles.brandName}>MediCore</span>
+      <div style={s.left} className="doctor-left">
+        <div style={s.orbA} />
+        <div style={s.orbB} />
+        <div style={s.grid} />
+        <div style={s.brand}>
+          <div style={s.brandIcon}>🩺</div>
+          <span style={s.brandName}>MediCore</span>
         </div>
-        <div style={styles.heroText}>
-          <h1 style={styles.heroHeading}>
+        <div style={s.heroText}>
+          <div style={s.eyebrow}>
+            <span style={s.eyebrowDot} />
+            {t("doctorAccess")}
+          </div>
+          <h1 style={s.heroHeading}>
             {t("doctorPortal").split(" ")[0]}
             <br />
-            {t("doctorPortal").split(" ").slice(1).join(" ")}
+            <span style={s.accent}>
+              {t("doctorPortal").split(" ").slice(1).join(" ")}
+            </span>
           </h1>
-          <p style={styles.heroSub}>
+          <p style={s.heroSub}>
             Manage your appointments, patients and schedule.
           </p>
         </div>
-        <div style={styles.features}>
+        <div style={s.features}>
           {[
             ["📅", "View today's schedule"],
             ["👤", "Manage patient records"],
             ["✅", "Update appointment status"],
           ].map(([icon, text]) => (
-            <div key={text} style={styles.featureItem}>
-              <span style={styles.featureIcon}>{icon}</span>
-              <span style={styles.featureText}>{text}</span>
+            <div key={text} style={s.featureItem}>
+              <span style={s.featureIcon}>{icon}</span>
+              <span style={s.featureText}>{text}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* RIGHT */}
-      <div style={styles.right} className="doctor-right">
-        {/* Language switcher */}
-        <div style={{ position: "absolute", top: 20, right: 20 }}>
+      <div style={s.right} className="doctor-right">
+        <div style={{ position: "absolute", top: 20, right: 20, zIndex: 10 }}>
           <LanguageSwitcher />
         </div>
 
-        <div style={styles.card} className="doctor-card">
-          <div style={styles.cardBadge}>{t("doctorAccess")}</div>
+        <div style={s.card} className="doctor-card">
+          <div style={s.cardBadge}>{t("doctorAccess")}</div>
 
-          {/* Toggle */}
-          <div style={styles.toggleRow}>
+          <div style={s.toggleRow}>
             <button
               style={{
-                ...styles.toggleBtn,
-                ...(mode === "login" ? styles.toggleActive : {}),
+                ...s.toggleBtn,
+                ...(mode === "login" ? s.toggleActive : {}),
               }}
               onClick={() => {
                 setMode("login");
@@ -141,8 +150,8 @@ export default function DoctorLogin() {
             </button>
             <button
               style={{
-                ...styles.toggleBtn,
-                ...(mode === "register" ? styles.toggleActive : {}),
+                ...s.toggleBtn,
+                ...(mode === "register" ? s.toggleActive : {}),
               }}
               onClick={() => {
                 setMode("register");
@@ -153,24 +162,24 @@ export default function DoctorLogin() {
             </button>
           </div>
 
-          <h2 style={styles.cardTitle}>
+          <h2 style={s.cardTitle}>
             {mode === "login" ? t("doctorSignIn") : t("doctorRegistration")}
           </h2>
-          <p style={styles.cardSub}>
+          <p style={s.cardSub}>
             {mode === "login"
               ? t("enterDoctorCredentials")
               : t("fillDetailsToRegister")}
           </p>
 
-          {error && <div style={styles.errorBox}>{error}</div>}
+          {error && <div style={s.errorBox}>⚠ {error}</div>}
 
-          <form onSubmit={handleSubmit} style={styles.form}>
-            {/* Register: Name */}
+          <form onSubmit={handleSubmit} style={s.form}>
             {mode === "register" && (
-              <div style={styles.field}>
-                <label style={styles.label}>{t("fullName")}</label>
+              <div style={s.field}>
+                <label style={s.label}>{t("fullName")}</label>
                 <input
-                  style={styles.input}
+                  style={s.input}
+                  className="in-focus"
                   type="text"
                   name="name"
                   value={form.name}
@@ -181,11 +190,11 @@ export default function DoctorLogin() {
               </div>
             )}
 
-            {/* Email */}
-            <div style={styles.field}>
-              <label style={styles.label}>{t("email")}</label>
+            <div style={s.field}>
+              <label style={s.label}>{t("email")}</label>
               <input
-                style={styles.input}
+                style={s.input}
+                className="in-focus"
                 type="email"
                 name="email"
                 value={form.email}
@@ -195,12 +204,12 @@ export default function DoctorLogin() {
               />
             </div>
 
-            {/* Password with Eye Icon */}
-            <div style={styles.field}>
-              <label style={styles.label}>{t("password")}</label>
-              <div style={styles.passwordWrap}>
+            <div style={s.field}>
+              <label style={s.label}>{t("password")}</label>
+              <div style={s.passwordWrap}>
                 <input
-                  style={styles.inputPassword}
+                  style={s.inputPassword}
+                  className="in-focus"
                   type={showPassword ? "text" : "password"}
                   name="password"
                   value={form.password}
@@ -210,7 +219,7 @@ export default function DoctorLogin() {
                 />
                 <button
                   type="button"
-                  style={styles.eyeBtn}
+                  style={s.eyeBtn}
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={
                     showPassword ? t("hidePassword") : t("showPassword")
@@ -251,14 +260,14 @@ export default function DoctorLogin() {
               </div>
             </div>
 
-            {/* Register only - Doctor fields */}
             {mode === "register" && (
               <>
-                <div style={styles.row} className="doctor-row">
-                  <div style={styles.field}>
-                    <label style={styles.label}>{t("phone2")}</label>
+                <div style={s.row} className="doctor-row">
+                  <div style={s.field}>
+                    <label style={s.label}>{t("phone2")}</label>
                     <input
-                      style={styles.input}
+                      style={s.input}
+                      className="in-focus"
                       type="tel"
                       name="phone"
                       value={form.phone}
@@ -267,10 +276,11 @@ export default function DoctorLogin() {
                       required
                     />
                   </div>
-                  <div style={styles.field}>
-                    <label style={styles.label}>{t("experienceYears")}</label>
+                  <div style={s.field}>
+                    <label style={s.label}>{t("experienceYears")}</label>
                     <input
-                      style={styles.input}
+                      style={s.input}
+                      className="in-focus"
                       type="number"
                       name="experience"
                       value={form.experience}
@@ -281,10 +291,11 @@ export default function DoctorLogin() {
                     />
                   </div>
                 </div>
-                <div style={styles.field}>
-                  <label style={styles.label}>{t("department")}</label>
+                <div style={s.field}>
+                  <label style={s.label}>{t("department")}</label>
                   <select
-                    style={styles.input}
+                    style={s.input}
+                    className="in-focus"
                     name="department"
                     value={form.department}
                     onChange={handleChange}
@@ -298,11 +309,12 @@ export default function DoctorLogin() {
                     ))}
                   </select>
                 </div>
-                <div style={styles.row} className="doctor-row">
-                  <div style={styles.field}>
-                    <label style={styles.label}>{t("specialization")}</label>
+                <div style={s.row} className="doctor-row">
+                  <div style={s.field}>
+                    <label style={s.label}>{t("specialization")}</label>
                     <input
-                      style={styles.input}
+                      style={s.input}
+                      className="in-focus"
                       type="text"
                       name="specialization"
                       value={form.specialization}
@@ -310,10 +322,11 @@ export default function DoctorLogin() {
                       placeholder="e.g. Cardiologist"
                     />
                   </div>
-                  <div style={styles.field}>
-                    <label style={styles.label}>{t("consultationFee")}</label>
+                  <div style={s.field}>
+                    <label style={s.label}>{t("consultationFee")}</label>
                     <input
-                      style={styles.input}
+                      style={s.input}
+                      className="in-focus"
                       type="number"
                       name="fee"
                       value={form.fee}
@@ -328,7 +341,7 @@ export default function DoctorLogin() {
 
             <button
               type="submit"
-              style={{ ...styles.btn, ...(loading ? styles.btnDisabled : {}) }}
+              style={{ ...s.btn, ...(loading ? s.btnDisabled : {}) }}
               disabled={loading}
             >
               {loading
@@ -344,59 +357,148 @@ export default function DoctorLogin() {
   );
 }
 
-const styles = {
+const tone = {
+  bg: "#0A0E17",
+  glass: "rgba(255,255,255,0.045)",
+  glassBorder: "rgba(255,255,255,0.09)",
+  text: "#EEF2F7",
+  muted: "#8CA0B8",
+  emerald: "#34D399",
+  emeraldDeep: "#047857",
+};
+
+const s = {
   page: {
     display: "flex",
     minHeight: "100vh",
-    fontFamily: "'Segoe UI', sans-serif",
-    backgroundColor: "#f0f4f8",
+    fontFamily: "'Inter', sans-serif",
+    background: tone.bg,
     position: "relative",
+    color: tone.text,
   },
   left: {
     flex: 1,
-    background: "linear-gradient(135deg, #065f46 0%, #10b981 100%)",
+    position: "relative",
+    overflow: "hidden",
+    background: `linear-gradient(160deg, ${tone.bg} 0%, #0e1c17 100%)`,
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
-    padding: "48px 52px",
-    color: "#fff",
+    padding: "clamp(32px, 4vw, 52px)",
+    borderRight: `1px solid ${tone.glassBorder}`,
   },
-  brand: { display: "flex", alignItems: "center", gap: 12 },
+  orbA: {
+    position: "absolute",
+    top: "6%",
+    left: "0%",
+    width: 380,
+    height: 380,
+    borderRadius: "50%",
+    background:
+      "radial-gradient(circle, rgba(52,211,153,0.18), transparent 70%)",
+    filter: "blur(10px)",
+    animation: "driftA 15s ease-in-out infinite",
+  },
+  orbB: {
+    position: "absolute",
+    bottom: "0%",
+    right: "0%",
+    width: 300,
+    height: 300,
+    borderRadius: "50%",
+    background:
+      "radial-gradient(circle, rgba(45,212,191,0.10), transparent 70%)",
+    filter: "blur(10px)",
+    animation: "driftB 18s ease-in-out infinite",
+  },
+  grid: {
+    position: "absolute",
+    inset: 0,
+    backgroundImage:
+      "radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1px)",
+    backgroundSize: "38px 38px",
+    maskImage: "linear-gradient(to bottom, black, transparent 88%)",
+  },
+  brand: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    position: "relative",
+    zIndex: 1,
+  },
   brandIcon: {
-    fontSize: 24,
-    background: "rgba(255,255,255,0.2)",
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     borderRadius: 12,
+    background: `linear-gradient(145deg, ${tone.emerald}, ${tone.emeraldDeep})`,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    fontSize: 18,
+    boxShadow:
+      "0 8px 16px -6px rgba(52,211,153,0.5), 0 1px 0 rgba(255,255,255,0.4) inset",
   },
-  brandName: { fontSize: 22, fontWeight: 700 },
+  brandName: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: 21,
+    fontWeight: 700,
+    color: "#fff",
+  },
   heroText: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
+    position: "relative",
+    zIndex: 1,
+  },
+  eyebrow: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    color: tone.muted,
+    fontSize: 13,
+    fontWeight: 500,
+    marginBottom: 16,
+    width: "fit-content",
+  },
+  eyebrowDot: {
+    width: 6,
+    height: 6,
+    borderRadius: "50%",
+    background: tone.emerald,
+    boxShadow: "0 0 0 4px rgba(52,211,153,0.15)",
   },
   heroHeading: {
-    fontSize: "clamp(32px, 4vw, 52px)",
-    fontWeight: 800,
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: "clamp(30px, 3.6vw, 46px)",
+    fontWeight: 700,
     lineHeight: 1.1,
     marginBottom: 16,
+    color: "#fff",
+    letterSpacing: "-0.02em",
   },
-  heroSub: { fontSize: 16, opacity: 0.85 },
-  features: { display: "flex", flexDirection: "column", gap: 12 },
+  accent: { color: tone.emerald },
+  heroSub: { fontSize: 15, color: tone.muted, maxWidth: 380, lineHeight: 1.6 },
+  features: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+    position: "relative",
+    zIndex: 1,
+  },
   featureItem: {
     display: "flex",
     alignItems: "center",
     gap: 12,
-    background: "rgba(255,255,255,0.12)",
-    borderRadius: 10,
-    padding: "10px 14px",
+    background: tone.glass,
+    borderRadius: 12,
+    padding: "12px 14px",
+    border: `1px solid ${tone.glassBorder}`,
+    boxShadow: "0 14px 28px -18px rgba(2,6,15,0.7)",
   },
   featureIcon: { fontSize: 18 },
-  featureText: { fontSize: 14, fontWeight: 500 },
+  featureText: { fontSize: 13.5, fontWeight: 500, color: "#cbd5e1" },
 
   right: {
     flex: 1,
@@ -404,22 +506,27 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     padding: 40,
-    overflowY: "auto",
     position: "relative",
+    overflowY: "auto",
+    background: tone.bg,
   },
   card: {
-    background: "#fff",
-    borderRadius: 20,
-    padding: "44px 44px",
+    background:
+      "linear-gradient(160deg, rgba(255,255,255,0.055), rgba(255,255,255,0.015))",
+    backdropFilter: "blur(14px)",
+    WebkitBackdropFilter: "blur(14px)",
+    borderRadius: 22,
+    padding: "40px 40px",
     width: "100%",
     maxWidth: 460,
-    boxShadow: "0 8px 40px rgba(0,0,0,0.10)",
-    boxSizing: "border-box",
+    border: `1px solid ${tone.glassBorder}`,
+    boxShadow:
+      "0 30px 60px -24px rgba(2,6,15,0.85), 0 1px 0 rgba(255,255,255,0.07) inset",
   },
   cardBadge: {
     display: "inline-block",
-    background: "#d1fae5",
-    color: "#065f46",
+    background: "rgba(52,211,153,0.14)",
+    color: tone.emerald,
     fontSize: 12,
     fontWeight: 700,
     padding: "4px 12px",
@@ -428,11 +535,12 @@ const styles = {
   },
   toggleRow: {
     display: "flex",
-    gap: 8,
-    background: "#f1f5f9",
+    gap: 6,
+    background: "rgba(0,0,0,0.25)",
     borderRadius: 10,
     padding: 4,
     marginBottom: 20,
+    border: `1px solid ${tone.glassBorder}`,
   },
   toggleBtn: {
     flex: 1,
@@ -440,58 +548,61 @@ const styles = {
     borderRadius: 8,
     border: "none",
     background: "transparent",
-    color: "#64748b",
+    color: tone.muted,
     fontWeight: 600,
     fontSize: 14,
     cursor: "pointer",
   },
   toggleActive: {
-    background: "#fff",
-    color: "#0f172a",
-    boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+    background: tone.emerald,
+    color: "#052e21",
+    boxShadow: "0 4px 10px -2px rgba(52,211,153,0.4)",
   },
   cardTitle: {
-    fontSize: 26,
-    fontWeight: 800,
-    color: "#0f172a",
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: 25,
+    fontWeight: 700,
+    color: "#fff",
     margin: "0 0 4px",
   },
-  cardSub: { color: "#64748b", marginBottom: 24 },
+  cardSub: { color: tone.muted, marginBottom: 24, fontSize: 14 },
   errorBox: {
-    background: "#fef2f2",
-    border: "1px solid #fecaca",
-    color: "#dc2626",
+    background: "rgba(255,122,122,0.1)",
+    border: "1px solid rgba(255,122,122,0.3)",
+    color: "#ffb4b4",
     borderRadius: 10,
     padding: "10px 12px",
     marginBottom: 16,
     fontSize: 13,
   },
   form: { display: "flex", flexDirection: "column", gap: 14 },
-  field: { display: "flex", flexDirection: "column", gap: 5 },
+  field: { display: "flex", flexDirection: "column", gap: 6 },
   row: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 },
-  label: { fontSize: 13, fontWeight: 600, color: "#374151" },
+  label: { fontSize: 13, fontWeight: 600, color: "#cbd5e1" },
   input: {
-    padding: "12px",
+    padding: "12px 14px",
     borderRadius: 10,
-    border: "1.5px solid #e2e8f0",
+    border: "1px solid rgba(255,255,255,0.1)",
     fontSize: 14,
     outline: "none",
-    background: "#f8fafc",
     width: "100%",
-    boxSizing: "border-box",
+    background: "rgba(0,0,0,0.22)",
+    color: "#fff",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.3) inset",
+    transition: "all 0.2s",
   },
-
-  // Eye icon
   passwordWrap: { position: "relative", display: "flex", alignItems: "center" },
   inputPassword: {
-    padding: "12px 44px 12px 12px",
+    padding: "12px 44px 12px 14px",
     borderRadius: 10,
-    border: "1.5px solid #e2e8f0",
+    border: "1px solid rgba(255,255,255,0.1)",
     fontSize: 14,
     outline: "none",
-    background: "#f8fafc",
     width: "100%",
-    boxSizing: "border-box",
+    background: "rgba(0,0,0,0.22)",
+    color: "#fff",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.3) inset",
+    transition: "all 0.2s",
   },
   eyeBtn: {
     position: "absolute",
@@ -499,25 +610,25 @@ const styles = {
     background: "none",
     border: "none",
     cursor: "pointer",
-    color: "#94a3b8",
+    color: tone.muted,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     padding: 4,
     borderRadius: 6,
-    transition: "color 0.2s",
   },
-
   btn: {
     marginTop: 6,
     padding: "14px",
     borderRadius: 12,
     border: "none",
-    background: "linear-gradient(135deg, #065f46, #10b981)",
-    color: "#fff",
+    background: `linear-gradient(145deg, ${tone.emerald}, ${tone.emeraldDeep})`,
+    color: "#052e21",
     fontWeight: 700,
     fontSize: 15,
     cursor: "pointer",
+    boxShadow:
+      "0 14px 28px -10px rgba(52,211,153,0.45), 0 1px 0 rgba(255,255,255,0.4) inset",
   },
-  btnDisabled: { opacity: 0.6 },
+  btnDisabled: { opacity: 0.6, cursor: "not-allowed" },
 };

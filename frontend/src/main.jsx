@@ -9,8 +9,8 @@ import { LanguageProvider } from "./context/LanguageSwitcher.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <LanguageProvider>
+
       <App />
-    </LanguageProvider>
+   
   </StrictMode>,
 );

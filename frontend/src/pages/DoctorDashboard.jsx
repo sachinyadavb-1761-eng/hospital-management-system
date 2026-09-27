@@ -1,3 +1,8 @@
+// src/pages/DoctorDashboard.jsx
+// Redesign: same logic/state/API calls — only presentation layer changed.
+// Dark glass sidebar (emerald accent, matches DoctorLogin) + soft light
+// content area with embossed 3D card shadows.
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { authAPI, appointmentsAPI, doctorsAPI } from "../services/api";
@@ -69,7 +74,6 @@ export default function DoctorDashboard() {
 
   const displayAppts = activeTab === "today" ? todayAppts : appointments;
 
-  // Colleagues = doctors in the same department, excluding self
   const myDeptId = myProfile?.department?._id || myProfile?.department;
   const colleagues = allDoctors.filter(
     (d) =>
@@ -82,28 +86,39 @@ export default function DoctorDashboard() {
     {
       label: "Total",
       value: appointments.length,
-      color: "#1a73e8",
+      color: "#2DD4BF",
       icon: "📋",
     },
-    { label: "Today", value: todayAppts.length, color: "#10b981", icon: "📆" },
+    { label: "Today", value: todayAppts.length, color: "#34D399", icon: "📆" },
     {
       label: "Pending",
       value: appointments.filter((a) => a.status === "pending").length,
-      color: "#f59e0b",
+      color: "#FBBF24",
       icon: "⏳",
     },
     {
       label: "Completed",
       value: appointments.filter((a) => a.status === "completed").length,
-      color: "#8b5cf6",
+      color: "#A78BFA",
       icon: "✅",
     },
   ];
 
   return (
     <div style={s.shell}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+        * { box-sizing: border-box; }
+        .lift { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .lift:hover { transform: translateY(-3px); box-shadow: 0 20px 40px -18px rgba(15,23,42,0.18) !important; }
+        .nav-btn:hover { background: rgba(255,255,255,0.06) !important; color: #fff !important; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+      `}</style>
+
       {/* ── Sidebar ── */}
       <aside style={s.sidebar}>
+        <div style={s.sidebarGlow} />
         <div style={s.logo}>
           <span style={s.logoIcon}>✚</span>
           <span style={s.logoText}>MediCore</span>
@@ -112,6 +127,7 @@ export default function DoctorDashboard() {
           {NAV.map(({ key, icon, label }) => (
             <button
               key={key}
+              className="nav-btn"
               style={{ ...s.navBtn, ...(activeTab === key ? s.navActive : {}) }}
               onClick={() => setActiveTab(key)}
             >
@@ -120,7 +136,6 @@ export default function DoctorDashboard() {
           ))}
         </nav>
         <div style={s.sideFooter}>
-          {/* Doctor's department badge */}
           {myProfile?.department && (
             <div style={s.deptBadge}>
               <span style={{ fontSize: 18 }}>
@@ -165,14 +180,11 @@ export default function DoctorDashboard() {
           </button>
         </div>
 
-        {/* Stats (only on appointments tabs) */}
         {activeTab !== "colleagues" && (
           <div style={s.statGrid}>
             {stats.map(({ label, value, color, icon }) => (
-              <div
-                key={label}
-                style={{ ...s.statCard, borderTop: `4px solid ${color}` }}
-              >
+              <div key={label} style={s.statCard} className="lift">
+                <div style={{ ...s.statAccent, background: color }} />
                 <div style={s.statIcon}>{icon}</div>
                 <div style={{ ...s.statVal, color }}>{value}</div>
                 <div style={s.statLabel}>{label}</div>
@@ -185,7 +197,6 @@ export default function DoctorDashboard() {
           <div style={s.loader}>Loading…</div>
         ) : (
           <>
-            {/* Appointments Table */}
             {(activeTab === "appointments" || activeTab === "today") && (
               <div style={s.tableWrap}>
                 <table style={s.table}>
@@ -294,10 +305,8 @@ export default function DoctorDashboard() {
               </div>
             )}
 
-            {/* My Department / Colleagues Tab */}
             {activeTab === "colleagues" && (
               <div>
-                {/* My own profile card */}
                 {myProfile && (
                   <div style={s.myProfileCard}>
                     <div style={s.myProfileAvatar}>
@@ -340,7 +349,11 @@ export default function DoctorDashboard() {
                 ) : (
                   <div style={s.colleagueGrid}>
                     {colleagues.map((doc) => (
-                      <div key={doc._id} style={s.colleagueCard}>
+                      <div
+                        key={doc._id}
+                        style={s.colleagueCard}
+                        className="lift"
+                      >
                         <div style={s.colleagueAvatar}>{doc.name[0]}</div>
                         <div style={s.colleagueInfo}>
                           <div style={s.colleagueName}>{doc.name}</div>
@@ -365,7 +378,9 @@ export default function DoctorDashboard() {
       {selectedAppt && (
         <div style={s.overlay} onClick={() => setSelectedAppt(null)}>
           <div style={s.modal} onClick={(e) => e.stopPropagation()}>
-            <h3>Appointment Details</h3>
+            <h3 style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              Appointment Details
+            </h3>
             <p>
               <strong>Patient:</strong> {selectedAppt.patient?.name}
             </p>
@@ -420,85 +435,128 @@ function StatusBadge({ status }) {
   );
 }
 
+const tone = {
+  navy: "#0A0E17",
+  emerald: "#34D399",
+  emeraldDeep: "#047857",
+};
+
 const s = {
   shell: {
     display: "flex",
     minHeight: "100vh",
-    fontFamily: "'Segoe UI', sans-serif",
-    background: "#f8fafc",
+    fontFamily: "'Inter', sans-serif",
+    background: "#F3F6FA",
   },
   sidebar: {
-    width: 240,
-    background: "#0f172a",
+    width: 250,
+    background: `linear-gradient(180deg, ${tone.navy} 0%, #0c1a16 100%)`,
     display: "flex",
     flexDirection: "column",
-    padding: "28px 16px",
+    padding: "28px 18px",
     position: "sticky",
     top: 0,
     height: "100vh",
+    overflow: "hidden",
+    borderRight: "1px solid rgba(255,255,255,0.06)",
+  },
+  sidebarGlow: {
+    position: "absolute",
+    top: -80,
+    left: -60,
+    width: 260,
+    height: 260,
+    borderRadius: "50%",
+    background:
+      "radial-gradient(circle, rgba(52,211,153,0.14), transparent 70%)",
+    filter: "blur(6px)",
+    pointerEvents: "none",
   },
   logo: {
     display: "flex",
     alignItems: "center",
     gap: 10,
-    padding: "0 8px 32px",
+    padding: "0 8px 28px",
     borderBottom: "1px solid rgba(255,255,255,0.08)",
-    marginBottom: 24,
+    marginBottom: 22,
+    position: "relative",
+    zIndex: 1,
   },
   logoIcon: {
-    fontSize: 22,
-    background: "#10b981",
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    fontSize: 20,
+    background: `linear-gradient(145deg, ${tone.emerald}, ${tone.emeraldDeep})`,
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontWeight: "bold",
-    color: "#fff",
+    color: "#052e21",
+    boxShadow:
+      "0 8px 16px -6px rgba(52,211,153,0.5), 0 1px 0 rgba(255,255,255,0.4) inset",
   },
-  logoText: { color: "#fff", fontSize: 18, fontWeight: 700 },
-  nav: { display: "flex", flexDirection: "column", gap: 4, flex: 1 },
+  logoText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: 700,
+    fontFamily: "'Space Grotesk', sans-serif",
+  },
+  nav: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    flex: 1,
+    position: "relative",
+    zIndex: 1,
+  },
   navBtn: {
     display: "flex",
     alignItems: "center",
     gap: 10,
     padding: "11px 14px",
-    borderRadius: 10,
+    borderRadius: 11,
     border: "none",
     background: "transparent",
-    color: "#94a3b8",
+    color: "#8CA0B8",
     fontSize: 14,
     fontWeight: 500,
     cursor: "pointer",
     textAlign: "left",
+    transition: "all 0.2s",
   },
-  navActive: { background: "#1e293b", color: "#fff" },
+  navActive: {
+    background: "rgba(52,211,153,0.12)",
+    color: "#fff",
+    boxShadow: "inset 3px 0 0 #34D399",
+  },
   sideFooter: {
     borderTop: "1px solid rgba(255,255,255,0.08)",
     paddingTop: 16,
     display: "flex",
     flexDirection: "column",
     gap: 12,
+    position: "relative",
+    zIndex: 1,
   },
   deptBadge: {
     display: "flex",
     alignItems: "center",
     gap: 10,
-    background: "rgba(16,185,129,0.12)",
-    borderRadius: 10,
+    background: "rgba(52,211,153,0.1)",
+    borderRadius: 11,
     padding: "10px 12px",
     marginBottom: 4,
   },
-  deptBadgeLabel: { color: "#64748b", fontSize: 11, fontWeight: 600 },
-  deptBadgeName: { color: "#d1fae5", fontSize: 13, fontWeight: 700 },
+  deptBadgeLabel: { color: "#8CA0B8", fontSize: 11, fontWeight: 600 },
+  deptBadgeName: { color: "#a7f3d0", fontSize: 13, fontWeight: 700 },
   userBadge: { display: "flex", alignItems: "center", gap: 10 },
   avatar: {
     width: 36,
     height: 36,
     borderRadius: "50%",
-    background: "#10b981",
-    color: "#fff",
+    background: `linear-gradient(145deg, ${tone.emerald}, ${tone.emeraldDeep})`,
+    color: "#052e21",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -509,10 +567,10 @@ const s = {
   userRole: { color: "#64748b", fontSize: 12 },
   logoutBtn: {
     padding: "9px 14px",
-    borderRadius: 8,
-    border: "1px solid #1e293b",
+    borderRadius: 9,
+    border: "1px solid rgba(255,122,122,0.3)",
     background: "transparent",
-    color: "#ef4444",
+    color: "#FF7A7A",
     fontSize: 13,
     cursor: "pointer",
     fontWeight: 600,
@@ -524,8 +582,17 @@ const s = {
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 32,
+    flexWrap: "wrap",
+    gap: 16,
   },
-  pageTitle: { margin: 0, fontSize: 26, fontWeight: 800, color: "#0f172a" },
+  pageTitle: {
+    margin: 0,
+    fontSize: 27,
+    fontWeight: 800,
+    color: "#0f172a",
+    fontFamily: "'Space Grotesk', sans-serif",
+    letterSpacing: "-0.02em",
+  },
   pageDate: { color: "#94a3b8", fontSize: 13, margin: "4px 0 0" },
   refreshBtn: {
     padding: "9px 18px",
@@ -545,19 +612,29 @@ const s = {
   },
   statCard: {
     background: "#fff",
-    borderRadius: 16,
-    padding: "24px 20px",
-    boxShadow: "0 1px 6px rgba(0,0,0,0.07)",
+    borderRadius: 18,
+    padding: "26px 22px",
+    position: "relative",
+    overflow: "hidden",
+    boxShadow: "0 14px 32px -18px rgba(15,23,42,0.14)",
+    border: "1px solid #eef2f7",
   },
+  statAccent: { position: "absolute", top: 0, left: 0, right: 0, height: 4 },
   statIcon: { fontSize: 26, marginBottom: 10 },
-  statVal: { fontSize: 36, fontWeight: 800, lineHeight: 1 },
+  statVal: {
+    fontSize: 36,
+    fontWeight: 800,
+    lineHeight: 1,
+    fontFamily: "'Space Grotesk', sans-serif",
+  },
   statLabel: { color: "#64748b", fontSize: 13, marginTop: 4 },
   loader: { textAlign: "center", padding: 80, color: "#94a3b8" },
   tableWrap: {
     background: "#fff",
-    borderRadius: 16,
+    borderRadius: 18,
     overflow: "hidden",
-    boxShadow: "0 1px 6px rgba(0,0,0,0.07)",
+    boxShadow: "0 14px 32px -18px rgba(15,23,42,0.14)",
+    border: "1px solid #eef2f7",
   },
   table: { width: "100%", borderCollapse: "collapse" },
   th: {
@@ -578,7 +655,7 @@ const s = {
     borderBottom: "1px solid #f1f5f9",
   },
   rowEven: { background: "#fff" },
-  rowOdd: { background: "#fafafa" },
+  rowOdd: { background: "#fafbfd" },
   emptyCell: {
     padding: "48px",
     textAlign: "center",
@@ -587,7 +664,7 @@ const s = {
   },
   completeBtn: {
     padding: "4px 10px",
-    borderRadius: 6,
+    borderRadius: 7,
     border: "none",
     background: "#dbeafe",
     color: "#1e40af",
@@ -597,7 +674,7 @@ const s = {
   },
   confirmBtn: {
     padding: "4px 10px",
-    borderRadius: 6,
+    borderRadius: 7,
     border: "none",
     background: "#d1fae5",
     color: "#065f46",
@@ -607,7 +684,7 @@ const s = {
   },
   cancelBtn: {
     padding: "4px 10px",
-    borderRadius: 6,
+    borderRadius: 7,
     border: "none",
     background: "#fee2e2",
     color: "#991b1b",
@@ -615,39 +692,44 @@ const s = {
     fontWeight: 600,
     cursor: "pointer",
   },
-  // My Department tab styles
   myProfileCard: {
     display: "flex",
     alignItems: "center",
     gap: 20,
-    background: "linear-gradient(135deg, #0f172a, #1e293b)",
+    background: `linear-gradient(135deg, ${tone.navy}, #123024)`,
     borderRadius: 20,
     padding: "24px 28px",
     marginBottom: 32,
     position: "relative",
     color: "#fff",
+    boxShadow: "0 20px 44px -22px rgba(2,6,15,0.5)",
   },
   myProfileAvatar: {
     width: 64,
     height: 64,
     borderRadius: 16,
-    background: "#10b981",
+    background: `linear-gradient(145deg, ${tone.emerald}, ${tone.emeraldDeep})`,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontWeight: 800,
     fontSize: 28,
-    color: "#fff",
+    color: "#052e21",
     flexShrink: 0,
   },
   myProfileInfo: { flex: 1 },
-  myProfileName: { fontSize: 20, fontWeight: 800, marginBottom: 2 },
+  myProfileName: {
+    fontSize: 20,
+    fontWeight: 800,
+    marginBottom: 2,
+    fontFamily: "'Space Grotesk', sans-serif",
+  },
   myProfileSpecialization: { color: "#94a3b8", fontSize: 14, marginBottom: 6 },
   myProfileDept: {
     display: "inline-flex",
     alignItems: "center",
     gap: 6,
-    background: "rgba(16,185,129,0.2)",
+    background: "rgba(52,211,153,0.2)",
     color: "#6ee7b7",
     fontSize: 13,
     fontWeight: 600,
@@ -660,13 +742,14 @@ const s = {
     gap: 16,
     fontSize: 13,
     color: "#94a3b8",
+    flexWrap: "wrap",
   },
   youBadge: {
     position: "absolute",
     top: 16,
     right: 20,
-    background: "#10b981",
-    color: "#fff",
+    background: tone.emerald,
+    color: "#052e21",
     fontSize: 12,
     fontWeight: 700,
     padding: "3px 12px",
@@ -677,6 +760,7 @@ const s = {
     fontWeight: 700,
     color: "#0f172a",
     marginBottom: 16,
+    fontFamily: "'Space Grotesk', sans-serif",
   },
   noDeptMsg: {
     textAlign: "center",
@@ -684,8 +768,8 @@ const s = {
     color: "#94a3b8",
     fontSize: 14,
     background: "#fff",
-    borderRadius: 16,
-    boxShadow: "0 1px 6px rgba(0,0,0,0.07)",
+    borderRadius: 18,
+    boxShadow: "0 14px 32px -18px rgba(15,23,42,0.14)",
   },
   colleagueGrid: {
     display: "grid",
@@ -697,17 +781,17 @@ const s = {
     alignItems: "center",
     gap: 14,
     background: "#fff",
-    borderRadius: 14,
+    borderRadius: 16,
     padding: "16px 18px",
-    boxShadow: "0 1px 6px rgba(0,0,0,0.07)",
-    border: "1.5px solid #f1f5f9",
+    boxShadow: "0 14px 32px -18px rgba(15,23,42,0.14)",
+    border: "1px solid #eef2f7",
   },
   colleagueAvatar: {
     width: 48,
     height: 48,
-    borderRadius: 12,
-    background: "#1a73e8",
-    color: "#fff",
+    borderRadius: 13,
+    background: "linear-gradient(145deg,#2DD4BF,#0F766E)",
+    color: "#04201c",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -727,7 +811,8 @@ const s = {
   overlay: {
     position: "fixed",
     inset: 0,
-    background: "rgba(0,0,0,0.5)",
+    background: "rgba(10,14,23,0.6)",
+    backdropFilter: "blur(2px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -735,18 +820,20 @@ const s = {
   },
   modal: {
     background: "#fff",
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 32,
     maxWidth: 400,
     width: "100%",
+    boxShadow: "0 30px 70px rgba(0,0,0,0.35)",
   },
   closeBtn: {
     marginTop: 16,
     padding: "8px 20px",
-    borderRadius: 8,
+    borderRadius: 9,
     border: "none",
-    background: "#0f172a",
+    background: tone.navy,
     color: "#fff",
     cursor: "pointer",
+    fontWeight: 600,
   },
 };

@@ -1,5 +1,7 @@
 // src/pages/Patientdashboard.jsx
-// Language dropdown — ek baar click → teeno pages pe apply (localStorage)
+// Redesign: same logic/state/API/Razorpay flow — only presentation layer
+// changed. Dark glass sidebar + soft light content area with embossed 3D
+// card shadows. Sky-teal accent matches the patient-facing brand color.
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -37,7 +39,6 @@ export default function PatientDashboard() {
   const [booking, setBooking] = useState(false);
   const [receipt, setReceipt] = useState(null);
 
-  // NAV uses t() so it updates when language changes
   const NAV = [
     { key: "book", icon: "📋", label: t("bookAppointmentTab") },
     { key: "myappointments", icon: "📅", label: t("myAppointments") },
@@ -111,11 +112,9 @@ export default function PatientDashboard() {
         status: "pending",
       };
 
-      // 1) Create appointment (kept as before)
       const res = await appointmentsAPI.create(payload);
       const appt = res.data.appointment;
 
-      // 2) Create Razorpay order for the appointment
       let orderRes;
       try {
         orderRes = await paymentAPI.createOrder({
@@ -123,7 +122,6 @@ export default function PatientDashboard() {
           appointmentId: appt._id,
         });
       } catch (err) {
-        // If create-order fails, don't block booking — appointment is saved as pending
         setBookError(
           "Payment failed or cancelled. Your appointment is saved as pending — you can retry payment from My Appointments.",
         );
@@ -135,7 +133,6 @@ export default function PatientDashboard() {
 
       const { order, key_id } = orderRes.data || {};
 
-      // 3) Ensure Razorpay script is loaded
       const loadRzp = () =>
         new Promise((resolve) => {
           if (window.Razorpay) return resolve(true);
@@ -157,7 +154,6 @@ export default function PatientDashboard() {
         return;
       }
 
-      // 4) Open Razorpay checkout
       const options = {
         key: key_id,
         amount: order.amount,
@@ -166,7 +162,6 @@ export default function PatientDashboard() {
         description: "Appointment Payment",
         order_id: order.id,
         handler: async function (response) {
-          // Called on successful payment — verify on backend
           try {
             const verifyRes = await paymentAPI.verifyPayment({
               razorpay_order_id: response.razorpay_order_id,
@@ -176,7 +171,6 @@ export default function PatientDashboard() {
             });
 
             if (verifyRes.data?.success) {
-              // Only after successful verify, show the receipt (keep same UI)
               setReceipt({
                 appointmentId: appt._id,
                 doctorName: selectedDoctor?.name,
@@ -207,7 +201,6 @@ export default function PatientDashboard() {
         },
         modal: {
           ondismiss: function () {
-            // User closed the popup without paying
             setBookError(
               "Payment failed or cancelled. Your appointment is saved as pending — you can retry payment from My Appointments.",
             );
@@ -218,8 +211,6 @@ export default function PatientDashboard() {
 
       const rzp = new window.Razorpay(options);
       rzp.open();
-
-      // Keep booking=true while payment is in progress so button shows processing state
     } catch (err) {
       setBookError(err.response?.data?.message || "Booking failed. Try again.");
       setBooking(false);
@@ -228,8 +219,19 @@ export default function PatientDashboard() {
 
   return (
     <div style={s.shell}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+        * { box-sizing: border-box; }
+        .lift { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .lift:hover { transform: translateY(-3px); box-shadow: 0 20px 40px -18px rgba(15,23,42,0.18) !important; }
+        .nav-btn:hover { background: rgba(255,255,255,0.06) !important; color: #fff !important; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+      `}</style>
+
       {/* ── Sidebar ── */}
       <aside style={s.sidebar}>
+        <div style={s.sidebarGlow} />
         <div style={s.logo}>
           <span style={s.logoIcon}>✚</span>
           <span style={s.logoText}>MediCore</span>
@@ -238,6 +240,7 @@ export default function PatientDashboard() {
           {NAV.map(({ key, icon, label }) => (
             <button
               key={key}
+              className="nav-btn"
               style={{ ...s.navBtn, ...(activeTab === key ? s.navActive : {}) }}
               onClick={() => setActiveTab(key)}
             >
@@ -246,7 +249,6 @@ export default function PatientDashboard() {
           ))}
         </nav>
         <div style={s.sideFooter}>
-          {/* Language switcher in sidebar */}
           <div style={{ marginBottom: 12 }}>
             <LanguageSwitcher style={{ width: "100%" }} />
           </div>
@@ -283,7 +285,6 @@ export default function PatientDashboard() {
             {/* ── BOOK TAB ── */}
             {activeTab === "book" && (
               <div style={s.bookGrid}>
-                {/* Left: Form */}
                 <div style={s.bookCard}>
                   <h2 style={s.cardTitle}>{t("newAppointment")}</h2>
 
@@ -336,7 +337,7 @@ export default function PatientDashboard() {
                           <div
                             style={{
                               fontSize: 14,
-                              color: "#10b981",
+                              color: "#0F766E",
                               fontWeight: 700,
                             }}
                           >
@@ -390,18 +391,8 @@ export default function PatientDashboard() {
                   </form>
                 </div>
 
-                {/* Right: Doctor list */}
                 <div>
-                  <h3
-                    style={{
-                      fontSize: 16,
-                      fontWeight: 700,
-                      marginBottom: 12,
-                      color: "#0f172a",
-                    }}
-                  >
-                    {t("availableDoctors")}
-                  </h3>
+                  <h3 style={s.availTitle}>{t("availableDoctors")}</h3>
                   <div style={s.deptTabs}>
                     <button
                       style={{
@@ -453,11 +444,7 @@ export default function PatientDashboard() {
                             setBookForm({ ...bookForm, doctorId: d._id })
                           }
                         >
-                          <div
-                            style={{ ...s.docAvatar, background: "#0ea5e9" }}
-                          >
-                            {d.name[0]}
-                          </div>
+                          <div style={s.docAvatar}>{d.name[0]}</div>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: 600, fontSize: 14 }}>
                               {d.name}
@@ -470,7 +457,7 @@ export default function PatientDashboard() {
                             <div
                               style={{
                                 fontSize: 13,
-                                color: "#10b981",
+                                color: "#0F766E",
                                 fontWeight: 600,
                               }}
                             >
@@ -511,7 +498,11 @@ export default function PatientDashboard() {
                         <td colSpan={6} style={s.emptyCell}>
                           {t("noAppointmentsYet")}{" "}
                           <span
-                            style={{ color: "#0ea5e9", cursor: "pointer" }}
+                            style={{
+                              color: "#0F766E",
+                              cursor: "pointer",
+                              fontWeight: 600,
+                            }}
                             onClick={() => setActiveTab("book")}
                           >
                             {t("bookNow") || "Book now →"}
@@ -558,7 +549,12 @@ export default function PatientDashboard() {
             <div style={{ textAlign: "center", marginBottom: 24 }}>
               <div style={{ fontSize: 48 }}>🎉</div>
               <h2
-                style={{ margin: "8px 0 4px", fontSize: 22, fontWeight: 800 }}
+                style={{
+                  margin: "8px 0 4px",
+                  fontSize: 22,
+                  fontWeight: 800,
+                  fontFamily: "'Space Grotesk', sans-serif",
+                }}
               >
                 Appointment Booked!
               </h2>
@@ -603,14 +599,14 @@ export default function PatientDashboard() {
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
-                  background: "#f0fdf4",
-                  borderRadius: 8,
-                  padding: "10px 8px",
+                  background: "rgba(45,212,191,0.1)",
+                  borderRadius: 10,
+                  padding: "10px 12px",
                 }}
               >
                 <span style={{ fontWeight: 700 }}>Consultation Fee</span>
                 <span
-                  style={{ color: "#10b981", fontWeight: 800, fontSize: 18 }}
+                  style={{ color: "#0F766E", fontWeight: 800, fontSize: 18 }}
                 >
                   ₹{receipt.fee}
                 </span>
@@ -621,7 +617,7 @@ export default function PatientDashboard() {
                 background: "#fef3c7",
                 color: "#92400e",
                 padding: 12,
-                borderRadius: 8,
+                borderRadius: 10,
                 fontSize: 13,
                 marginTop: 16,
                 textAlign: "center",
@@ -678,74 +674,117 @@ function StatusBadge({ status }) {
   );
 }
 
+const tone = {
+  navy: "#0A0E17",
+  teal: "#2DD4BF",
+  tealDeep: "#0F766E",
+};
+
 const s = {
   shell: {
     display: "flex",
     minHeight: "100vh",
-    fontFamily: "'Segoe UI', sans-serif",
-    background: "#f8fafc",
+    fontFamily: "'Inter', sans-serif",
+    background: "#F3F6FA",
   },
   sidebar: {
-    width: 240,
-    background: "#0f172a",
+    width: 250,
+    background: `linear-gradient(180deg, ${tone.navy} 0%, #0d1a1a 100%)`,
     display: "flex",
     flexDirection: "column",
-    padding: "28px 16px",
+    padding: "28px 18px",
     position: "sticky",
     top: 0,
     height: "100vh",
+    overflow: "hidden",
+    borderRight: "1px solid rgba(255,255,255,0.06)",
+  },
+  sidebarGlow: {
+    position: "absolute",
+    top: -80,
+    left: -60,
+    width: 260,
+    height: 260,
+    borderRadius: "50%",
+    background:
+      "radial-gradient(circle, rgba(45,212,191,0.14), transparent 70%)",
+    filter: "blur(6px)",
+    pointerEvents: "none",
   },
   logo: {
     display: "flex",
     alignItems: "center",
     gap: 10,
-    padding: "0 8px 32px",
+    padding: "0 8px 28px",
     borderBottom: "1px solid rgba(255,255,255,0.08)",
-    marginBottom: 24,
+    marginBottom: 22,
+    position: "relative",
+    zIndex: 1,
   },
   logoIcon: {
-    fontSize: 22,
-    background: "#0ea5e9",
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    fontSize: 20,
+    background: `linear-gradient(145deg, ${tone.teal}, ${tone.tealDeep})`,
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontWeight: "bold",
-    color: "#fff",
+    color: "#04201c",
+    boxShadow:
+      "0 8px 16px -6px rgba(45,212,191,0.5), 0 1px 0 rgba(255,255,255,0.4) inset",
   },
-  logoText: { color: "#fff", fontSize: 18, fontWeight: 700 },
-  nav: { display: "flex", flexDirection: "column", gap: 4, flex: 1 },
+  logoText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: 700,
+    fontFamily: "'Space Grotesk', sans-serif",
+  },
+  nav: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    flex: 1,
+    position: "relative",
+    zIndex: 1,
+  },
   navBtn: {
     display: "flex",
     alignItems: "center",
     gap: 10,
     padding: "11px 14px",
-    borderRadius: 10,
+    borderRadius: 11,
     border: "none",
     background: "transparent",
-    color: "#94a3b8",
+    color: "#8CA0B8",
     fontSize: 14,
     fontWeight: 500,
     cursor: "pointer",
     textAlign: "left",
+    transition: "all 0.2s",
   },
-  navActive: { background: "#1e293b", color: "#fff" },
+  navActive: {
+    background: "rgba(45,212,191,0.12)",
+    color: "#fff",
+    boxShadow: "inset 3px 0 0 #2DD4BF",
+  },
   sideFooter: {
     borderTop: "1px solid rgba(255,255,255,0.08)",
     paddingTop: 20,
     display: "flex",
     flexDirection: "column",
     gap: 12,
+    position: "relative",
+    zIndex: 1,
   },
   userBadge: { display: "flex", alignItems: "center", gap: 10 },
   avatar: {
     width: 36,
     height: 36,
     borderRadius: "50%",
-    background: "#0ea5e9",
-    color: "#fff",
+    background: `linear-gradient(145deg, ${tone.teal}, ${tone.tealDeep})`,
+    color: "#04201c",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -756,10 +795,10 @@ const s = {
   userRole: { color: "#64748b", fontSize: 12 },
   logoutBtn: {
     padding: "9px 14px",
-    borderRadius: 8,
-    border: "1px solid #1e293b",
+    borderRadius: 9,
+    border: "1px solid rgba(255,122,122,0.3)",
     background: "transparent",
-    color: "#ef4444",
+    color: "#FF7A7A",
     fontSize: 13,
     cursor: "pointer",
     fontWeight: 600,
@@ -772,7 +811,14 @@ const s = {
     alignItems: "flex-start",
     marginBottom: 32,
   },
-  pageTitle: { margin: 0, fontSize: 26, fontWeight: 800, color: "#0f172a" },
+  pageTitle: {
+    margin: 0,
+    fontSize: 27,
+    fontWeight: 800,
+    color: "#0f172a",
+    fontFamily: "'Space Grotesk', sans-serif",
+    letterSpacing: "-0.02em",
+  },
   pageDate: { color: "#94a3b8", fontSize: 13, margin: "4px 0 0" },
   loader: { textAlign: "center", padding: 80, color: "#94a3b8" },
   bookGrid: { display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 32 },
@@ -780,20 +826,22 @@ const s = {
     background: "#fff",
     borderRadius: 20,
     padding: 32,
-    boxShadow: "0 1px 6px rgba(0,0,0,0.07)",
+    boxShadow: "0 14px 32px -18px rgba(15,23,42,0.14)",
+    border: "1px solid #eef2f7",
   },
   cardTitle: {
     margin: "0 0 24px",
     fontSize: 20,
     fontWeight: 800,
     color: "#0f172a",
+    fontFamily: "'Space Grotesk', sans-serif",
   },
   form: { display: "flex", flexDirection: "column", gap: 18 },
   fieldGroup: { display: "flex", flexDirection: "column", gap: 6 },
   label: { fontSize: 13, fontWeight: 600, color: "#374151" },
   input: {
     padding: "11px 13px",
-    borderRadius: 8,
+    borderRadius: 9,
     border: "1.5px solid #e2e8f0",
     fontSize: 14,
     outline: "none",
@@ -801,7 +849,7 @@ const s = {
   },
   select: {
     padding: "11px 13px",
-    borderRadius: 8,
+    borderRadius: 9,
     border: "1.5px solid #e2e8f0",
     fontSize: 14,
     outline: "none",
@@ -812,17 +860,17 @@ const s = {
     display: "flex",
     alignItems: "center",
     gap: 14,
-    background: "#f0fdf4",
-    border: "1.5px solid #bbf7d0",
-    borderRadius: 12,
+    background: "rgba(45,212,191,0.08)",
+    border: "1.5px solid rgba(45,212,191,0.3)",
+    borderRadius: 14,
     padding: "14px 16px",
   },
   doctorAvatar: {
     width: 44,
     height: 44,
-    borderRadius: 10,
-    background: "#0ea5e9",
-    color: "#fff",
+    borderRadius: 12,
+    background: "linear-gradient(145deg,#2DD4BF,#0F766E)",
+    color: "#04201c",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -831,13 +879,21 @@ const s = {
   },
   bookBtn: {
     padding: "14px",
-    borderRadius: 10,
+    borderRadius: 12,
     border: "none",
-    background: "linear-gradient(135deg, #0ea5e9, #1a73e8)",
-    color: "#fff",
+    background: `linear-gradient(145deg, ${tone.teal}, ${tone.tealDeep})`,
+    color: "#04201c",
     fontWeight: 700,
     fontSize: 15,
     cursor: "pointer",
+    boxShadow: "0 14px 28px -10px rgba(45,212,191,0.45)",
+  },
+  availTitle: {
+    fontSize: 16,
+    fontWeight: 700,
+    marginBottom: 12,
+    color: "#0f172a",
+    fontFamily: "'Space Grotesk', sans-serif",
   },
   deptTabs: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 },
   deptTab: {
@@ -852,16 +908,16 @@ const s = {
     whiteSpace: "nowrap",
   },
   deptTabActive: {
-    background: "#0ea5e9",
-    color: "#fff",
-    border: "1.5px solid #0ea5e9",
+    background: tone.teal,
+    color: "#04201c",
+    border: "1.5px solid transparent",
   },
   emptyDoctors: {
     padding: 20,
     textAlign: "center",
     color: "#94a3b8",
     background: "#fff",
-    borderRadius: 12,
+    borderRadius: 14,
   },
   doctorList: { display: "flex", flexDirection: "column", gap: 10 },
   doctorListCard: {
@@ -869,20 +925,22 @@ const s = {
     alignItems: "center",
     gap: 12,
     padding: "14px 16px",
-    borderRadius: 12,
+    borderRadius: 14,
     border: "1.5px solid #e2e8f0",
     background: "#fff",
     cursor: "pointer",
+    transition: "all 0.15s",
   },
   doctorListCardActive: {
-    border: "1.5px solid #0ea5e9",
-    background: "#f0f9ff",
+    border: `1.5px solid ${tone.teal}`,
+    background: "rgba(45,212,191,0.06)",
   },
   docAvatar: {
     width: 40,
     height: 40,
-    borderRadius: 10,
-    color: "#fff",
+    borderRadius: 11,
+    background: "linear-gradient(145deg,#2DD4BF,#0F766E)",
+    color: "#04201c",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -892,9 +950,10 @@ const s = {
   },
   tableWrap: {
     background: "#fff",
-    borderRadius: 16,
+    borderRadius: 18,
     overflow: "hidden",
-    boxShadow: "0 1px 6px rgba(0,0,0,0.07)",
+    boxShadow: "0 14px 32px -18px rgba(15,23,42,0.14)",
+    border: "1px solid #eef2f7",
   },
   table: { width: "100%", borderCollapse: "collapse" },
   th: {
@@ -914,7 +973,7 @@ const s = {
     borderBottom: "1px solid #f1f5f9",
   },
   rowEven: { background: "#fff" },
-  rowOdd: { background: "#fafafa" },
+  rowOdd: { background: "#fafbfd" },
   emptyCell: {
     padding: "48px",
     textAlign: "center",
@@ -925,7 +984,7 @@ const s = {
     background: "#fee2e2",
     color: "#991b1b",
     padding: "10px 14px",
-    borderRadius: 8,
+    borderRadius: 9,
     fontSize: 13,
     marginBottom: 4,
   },
@@ -933,14 +992,15 @@ const s = {
     background: "#fef3c7",
     color: "#92400e",
     padding: "10px 14px",
-    borderRadius: 8,
+    borderRadius: 9,
     fontSize: 13,
     marginBottom: 4,
   },
   overlay: {
     position: "fixed",
     inset: 0,
-    background: "rgba(0,0,0,0.5)",
+    background: "rgba(10,14,23,0.6)",
+    backdropFilter: "blur(2px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -953,12 +1013,12 @@ const s = {
     padding: 32,
     maxWidth: 460,
     width: "100%",
-    boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+    boxShadow: "0 30px 70px rgba(0,0,0,0.35)",
   },
   receiptCloseBtn: {
     flex: 1,
     padding: "12px",
-    borderRadius: 10,
+    borderRadius: 11,
     border: "1.5px solid #e2e8f0",
     background: "#fff",
     color: "#475569",
@@ -968,9 +1028,9 @@ const s = {
   receiptViewBtn: {
     flex: 2,
     padding: "12px",
-    borderRadius: 10,
+    borderRadius: 11,
     border: "none",
-    background: "#0f172a",
+    background: tone.navy,
     color: "#fff",
     fontWeight: 700,
     cursor: "pointer",
