@@ -15,6 +15,10 @@ import {
 } from "../services/api";
 import { useLanguage, LanguageSwitcher } from "../context/LanguageSwitcher";
 import { getUser } from "../utils/auth";
+import {
+  downloadReceiptPDF,
+  receiptFromAppointment,
+} from "../utils/receiptPdf";
 
 export default function PatientDashboard() {
   const navigate = useNavigate();
@@ -183,6 +187,9 @@ export default function PatientDashboard() {
                 time: bookForm.time,
                 fee: selectedDoctor?.fee || 0,
                 patientName: myPatient.name,
+                paymentId: response.razorpay_payment_id,
+                orderId: response.razorpay_order_id,
+                paidAt: new Date().toISOString(),
               });
               setBookForm({ doctorId: "", date: "", time: "", notes: "" });
               await fetchData();
@@ -485,6 +492,7 @@ export default function PatientDashboard() {
                         "Time",
                         "Fee",
                         "Status",
+                        "Receipt",
                       ].map((c) => (
                         <th key={c} style={s.th}>
                           {c}
@@ -495,7 +503,7 @@ export default function PatientDashboard() {
                   <tbody>
                     {myAppointments.length === 0 ? (
                       <tr>
-                        <td colSpan={6} style={s.emptyCell}>
+                        <td colSpan={7} style={s.emptyCell}>
                           {t("noAppointmentsYet")}{" "}
                           <span
                             style={{
@@ -530,6 +538,27 @@ export default function PatientDashboard() {
                           <td style={s.td}>₹{a.fee || a.doctor?.fee || "—"}</td>
                           <td style={s.td}>
                             <StatusBadge status={a.status} />
+                          </td>
+                          <td style={s.td}>
+                            {a.paymentStatus === "confirmed" ? (
+                              <button
+                                style={s.rowPdfBtn}
+                                onClick={() =>
+                                  downloadReceiptPDF(
+                                    receiptFromAppointment(
+                                      a,
+                                      myPatient?.name || user.name,
+                                    ),
+                                  )
+                                }
+                              >
+                                ⬇ PDF
+                              </button>
+                            ) : (
+                              <span style={{ color: "#94a3b8", fontSize: 13 }}>
+                                Unpaid
+                              </span>
+                            )}
                           </td>
                         </tr>
                       ))
@@ -625,7 +654,13 @@ export default function PatientDashboard() {
             >
               📩 Please arrive 10 minutes early.
             </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+            <button
+              style={s.receiptPdfBtn}
+              onClick={() => downloadReceiptPDF(receipt)}
+            >
+              ⬇ Download Receipt (PDF)
+            </button>
+            <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
               <button
                 style={s.receiptCloseBtn}
                 onClick={() => setReceipt(null)}
@@ -1023,6 +1058,28 @@ const s = {
     background: "#fff",
     color: "#475569",
     fontWeight: 600,
+    cursor: "pointer",
+  },
+  receiptPdfBtn: {
+    width: "100%",
+    marginTop: 20,
+    padding: "12px",
+    borderRadius: 11,
+    border: "none",
+    background: "#0F766E",
+    color: "#fff",
+    fontWeight: 700,
+    fontSize: 14,
+    cursor: "pointer",
+  },
+  rowPdfBtn: {
+    padding: "6px 12px",
+    borderRadius: 8,
+    border: "1.5px solid #0F766E",
+    background: "#fff",
+    color: "#0F766E",
+    fontWeight: 700,
+    fontSize: 12,
     cursor: "pointer",
   },
   receiptViewBtn: {
