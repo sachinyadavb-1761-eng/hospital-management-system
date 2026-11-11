@@ -1,11 +1,19 @@
 // src/components/ChatWidget.jsx
-// AI Receptionist — floating chat widget (MVP v1)
-// Patient describes symptoms, gets department suggestion, doctor list, and a booking link
+// AI Receptionist — floating chat widget (v2: text + voice)
+// Patient describes symptoms (typing OR speaking), gets department suggestion,
+// doctor list, and a booking link. Replies can be read aloud.
+//
+// Voice uses the browser's built-in Web Speech API:
+//   - SpeechRecognition  → mic input  (Chrome / Edge / Safari; not Firefox)
+//   - speechSynthesis    → read replies aloud (all modern browsers)
+// No extra npm package, API key or backend change is needed.
+// Note: the mic needs HTTPS (localhost is fine for development).
 
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { chatbotAPI } from "../services/api";
 import { isLoggedIn } from "../utils/auth";
+import { useLanguage } from "../context/LanguageSwitcher";
 
 const GREETING = {
   role: "assistant",
@@ -13,30 +21,255 @@ const GREETING = {
     "Namaste! 🙏 Main aapka AI Receptionist hoon. Aap apne symptoms batayein, main aapko sahi department aur doctor tak pahunchane mein madad karunga.",
 };
 
+// ── Voice support detection ──────────────────────────────────────────────────
+const SpeechRecognitionAPI =
+  typeof window !== "undefined"
+    ? window.SpeechRecognition || window.webkitSpeechRecognition
+    : null;
+
+const synth =
+  typeof window !== "undefined" && "speechSynthesis" in window
+    ? window.speechSynthesis
+    : null;
+
+// App language code (from LanguageProvider) → BCP-47 code for speech recognition.
+// Browser support differs per language; Hindi/English/Hinglish work best.
+const SPEECH_LANG = {
+  en: "en-IN",
+  hi: "hi-IN",
+  bn: "bn-IN",
+  te: "te-IN",
+  mr: "mr-IN",
+  ta: "ta-IN",
+  gu: "gu-IN",
+  kn: "kn-IN",
+  ml: "ml-IN",
+  pa: "pa-IN",
+  ur: "ur-IN",
+  or: "or-IN",
+  as: "as-IN",
+  sa: "hi-IN",
+};
+
+// TTS reads emoji names out loud ("folded hands") — strip them first.
+const cleanForSpeech = (text) =>
+  String(text || "")
+    .replace(/\p{Extended_Pictographic}/gu, "")
+    .replace(/️/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+// Indic / Arabic script present? (Bot normally replies in Roman Hinglish.)
+const hasNativeScript = (text) => /[ऀ-෿؀-ۿ]/.test(text);
+
+const pickVoice = (langCode) => {
+  if (!synth) return null;
+  const voices = synth.getVoices();
+  const norm = (s) => s.replace("_", "-").toLowerCase();
+  const target = norm(langCode);
+  return (
+    voices.find((v) => norm(v.lang) === target) ||
+    voices.find((v) => norm(v.lang).startsWith(target.split("-")[0])) ||
+    null
+  );
+};
+
+const VOICE_ERRORS = {
+  "not-allowed":
+    "Mic ki permission blocked hai. Browser settings mein mic allow karein.",
+  "service-not-allowed":
+    "Mic ki permission blocked hai. Browser settings mein mic allow karein.",
+  "no-speech": "Kuch sunai nahi diya. Dobara try karein.",
+  "audio-capture": "Mic nahi mila. Mic connect karke dobara try karein.",
+  network: "Voice service se connect nahi ho paya. Internet check karein.",
+  "language-not-supported":
+    "Is language ke liye voice support available nahi hai.",
+};
+
 export default function ChatWidget() {
   const navigate = useNavigate();
+  const { lang } = useLanguage();
+  const recogLang = SPEECH_LANG[lang] || "en-IN";
+
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([GREETING]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [speakReplies, setSpeakReplies] = useState(false); // always read replies aloud
+  const [speakingIdx, setSpeakingIdx] = useState(null);
+  const [voiceError, setVoiceError] = useState("");
+
   const scrollRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const cancelledRef = useRef(false); // true when we stop the mic on purpose (don't auto-send)
+
+  // Refs let the long-lived speech callbacks always see fresh values
+  const messagesRef = useRef(messages);
+  const loadingRef = useRef(false);
+  const recogLangRef = useRef(recogLang);
+  const sendTextRef = useRef(null);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    recogLangRef.current = recogLang;
+  }, [recogLang]);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, open, loading]);
+  }, [messages, open, loading, listening, voiceError]);
 
-  const handleSend = async (e) => {
-    e?.preventDefault();
-    const text = input.trim();
-    if (!text || loading) return;
+  // Chrome loads voices asynchronously — touch getVoices() once so they're ready
+  useEffect(() => {
+    if (!synth) return;
+    synth.getVoices();
+    const warm = () => synth.getVoices();
+    synth.addEventListener?.("voiceschanged", warm);
+    return () => synth.removeEventListener?.("voiceschanged", warm);
+  }, []);
+
+  // Stop mic + speech when widget is closed or unmounted
+  useEffect(() => {
+    if (!open) stopAllVoice();
+  }, [open]);
+
+  useEffect(() => () => stopAllVoice(), []);
+
+  // ── Voice helpers ──────────────────────────────────────────────────────────
+  function stopAllVoice() {
+    cancelledRef.current = true;
+    try {
+      recognitionRef.current?.abort();
+    } catch {
+      /* ignore */
+    }
+    recognitionRef.current = null;
+    setListening(false);
+    synth?.cancel();
+    setSpeakingIdx(null);
+  }
+
+  const speak = (text, idx) => {
+    if (!synth) return;
+    const clean = cleanForSpeech(text);
+    if (!clean) return;
+
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(clean);
+    // Roman-script Hinglish reads best with an Indian-English voice;
+    // native-script text uses the app's selected language.
+    u.lang = hasNativeScript(clean) ? recogLangRef.current : "en-IN";
+    const voice = pickVoice(u.lang);
+    if (voice) u.voice = voice;
+    u.rate = 0.95;
+    u.onstart = () => setSpeakingIdx(idx);
+    u.onend = () => setSpeakingIdx((cur) => (cur === idx ? null : cur));
+    u.onerror = () => setSpeakingIdx((cur) => (cur === idx ? null : cur));
+    synth.speak(u);
+  };
+
+  const toggleSpeakMessage = (text, idx) => {
+    if (speakingIdx === idx) {
+      synth?.cancel();
+      setSpeakingIdx(null);
+    } else {
+      speak(text, idx);
+    }
+  };
+
+  const startListening = () => {
+    if (!SpeechRecognitionAPI || loadingRef.current) return;
+
+    synth?.cancel(); // don't let the mic hear the bot talking
+    setSpeakingIdx(null);
+    setVoiceError("");
+    cancelledRef.current = false;
+
+    const rec = new SpeechRecognitionAPI();
+    rec.lang = recogLangRef.current;
+    rec.interimResults = true;
+    rec.continuous = false;
+    rec.maxAlternatives = 1;
+
+    let finalText = "";
+    let interimText = "";
+
+    rec.onstart = () => setListening(true);
+
+    rec.onresult = (e) => {
+      interimText = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) finalText += r[0].transcript;
+        else interimText += r[0].transcript;
+      }
+      setInput((finalText + interimText).trim()); // live transcript in the input box
+    };
+
+    rec.onerror = (e) => {
+      if (e.error === "aborted") return;
+      setVoiceError(VOICE_ERRORS[e.error] || "Voice input mein problem aayi.");
+    };
+
+    rec.onend = () => {
+      setListening(false);
+      recognitionRef.current = null;
+      // Some browsers end without marking the last phrase final — keep it
+      const text = (finalText || interimText).trim();
+      if (!cancelledRef.current && text) {
+        sendTextRef.current?.(text, true); // auto-send what the patient said
+      } else if (!text) {
+        setInput("");
+      }
+    };
+
+    try {
+      rec.start();
+      recognitionRef.current = rec;
+    } catch {
+      setVoiceError("Mic start nahi ho paya. Dobara try karein.");
+    }
+  };
+
+  const stopListening = () => {
+    // Normal stop → onend fires and sends what was captured
+    try {
+      recognitionRef.current?.stop();
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const toggleMic = () => (listening ? stopListening() : startListening());
+
+  const toggleSpeakReplies = () => {
+    setSpeakReplies((v) => {
+      if (v) {
+        synth?.cancel();
+        setSpeakingIdx(null);
+      }
+      return !v;
+    });
+  };
+
+  // ── Sending ────────────────────────────────────────────────────────────────
+  const sendText = async (rawText, viaVoice = false) => {
+    const text = rawText.trim();
+    if (!text || loadingRef.current) return;
 
     const userMsg = { role: "user", content: text };
-    const newMessages = [...messages, userMsg];
+    const newMessages = [...messagesRef.current, userMsg];
+    messagesRef.current = newMessages;
     setMessages(newMessages);
     setInput("");
+    setVoiceError("");
     setLoading(true);
+    loadingRef.current = true;
 
     try {
       // Only send role/content history (exclude extra metadata like doctors, isEmergency)
@@ -47,28 +280,49 @@ export default function ChatWidget() {
       const res = await chatbotAPI.sendMessage(text, history.slice(0, -1));
       const { reply, suggestedDepartment, isEmergency, doctors } = res.data;
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: reply,
-          suggestedDepartment,
-          isEmergency,
-          doctors,
-        },
-      ]);
-    } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content:
-            "Sorry, I couldn't connect right now. Please try again shortly.",
-        },
-      ]);
+      const botMsg = {
+        role: "assistant",
+        content: reply,
+        suggestedDepartment,
+        isEmergency,
+        doctors,
+      };
+      const botIdx = newMessages.length; // index this reply will have in `messages`
+      messagesRef.current = [...newMessages, botMsg];
+      setMessages(messagesRef.current);
+
+      // Spoke to the bot → bot speaks back. Typed → only if speaker toggle is on.
+      if (viaVoice || speakReplies) speak(reply, botIdx);
+    } catch {
+      const errMsg = {
+        role: "assistant",
+        content:
+          "Sorry, I couldn't connect right now. Please try again shortly.",
+      };
+      messagesRef.current = [...newMessages, errMsg];
+      setMessages(messagesRef.current);
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
+  };
+
+  // Always point the ref at the latest closure (fresh speakReplies etc.)
+  sendTextRef.current = sendText;
+
+  const handleSend = (e) => {
+    e?.preventDefault();
+    if (listening) {
+      // Send pressed while mic is on: stop mic quietly and send what's in the box
+      cancelledRef.current = true;
+      try {
+        recognitionRef.current?.abort();
+      } catch {
+        /* ignore */
+      }
+      setListening(false);
+    }
+    sendText(input, false);
   };
 
   const handleBookClick = () => {
@@ -91,12 +345,34 @@ export default function ChatWidget() {
         <div style={styles.window}>
           <div style={styles.header}>
             <div style={styles.headerDot} />
-            <div>
+            <div style={{ flex: 1 }}>
               <div style={styles.headerTitle}>AI Receptionist</div>
               <div style={styles.headerSubtitle}>
-                Tell me your symptoms, I'll help
+                {SpeechRecognitionAPI
+                  ? "Type or speak your symptoms"
+                  : "Tell me your symptoms, I'll help"}
               </div>
             </div>
+
+            {synth && (
+              <button
+                type="button"
+                onClick={toggleSpeakReplies}
+                style={{
+                  ...styles.speakToggle,
+                  ...(speakReplies ? styles.speakToggleOn : {}),
+                }}
+                title={
+                  speakReplies
+                    ? "Replies are read aloud (tap to mute)"
+                    : "Read replies aloud"
+                }
+                aria-label="Toggle reading replies aloud"
+                aria-pressed={speakReplies}
+              >
+                {speakReplies ? "🔊" : "🔇"}
+              </button>
+            )}
           </div>
 
           <div style={styles.body} ref={scrollRef}>
@@ -118,6 +394,19 @@ export default function ChatWidget() {
                   }}
                 >
                   {m.content}
+
+                  {m.role === "assistant" && synth && (
+                    <button
+                      type="button"
+                      onClick={() => toggleSpeakMessage(m.content, i)}
+                      style={styles.listenBtn}
+                      aria-label={
+                        speakingIdx === i ? "Stop speaking" : "Listen to reply"
+                      }
+                    >
+                      {speakingIdx === i ? "⏹ Stop" : "🔊 Suno"}
+                    </button>
+                  )}
 
                   {m.suggestedDepartment && (
                     <div style={styles.deptTag}>
@@ -160,16 +449,39 @@ export default function ChatWidget() {
                 </div>
               </div>
             )}
+
+            {voiceError && <div style={styles.voiceError}>{voiceError}</div>}
           </div>
 
           <form onSubmit={handleSend} style={styles.inputRow}>
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your symptom..."
+              placeholder={
+                listening ? "Listening… boliye 🎤" : "Type your symptom..."
+              }
               style={styles.input}
               disabled={loading}
             />
+
+            {SpeechRecognitionAPI && (
+              <button
+                type="button"
+                onClick={toggleMic}
+                style={{
+                  ...styles.micBtn,
+                  ...(listening ? styles.micBtnActive : {}),
+                }}
+                disabled={loading}
+                aria-label={
+                  listening ? "Stop listening" : "Speak your symptoms"
+                }
+                title={listening ? "Tap to stop" : "Tap to speak"}
+              >
+                {listening ? "⏹" : "🎤"}
+              </button>
+            )}
+
             <button type="submit" style={styles.sendBtn} disabled={loading}>
               ➤
             </button>
@@ -181,6 +493,11 @@ export default function ChatWidget() {
         @keyframes chatbot-blink {
           0%, 100% { opacity: 0.3; }
           50% { opacity: 1; }
+        }
+        @keyframes chatbot-pulse {
+          0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+          70%  { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
       `}</style>
     </>
@@ -237,6 +554,21 @@ const styles = {
   },
   headerTitle: { color: "#fff", fontWeight: 600, fontSize: 14 },
   headerSubtitle: { color: "#94a3b8", fontSize: 11 },
+  speakToggle: {
+    width: 32,
+    height: 32,
+    borderRadius: "50%",
+    background: "#1e293b",
+    color: "#94a3b8",
+    border: "1px solid #334155",
+    fontSize: 14,
+    cursor: "pointer",
+  },
+  speakToggleOn: {
+    background: "#0ea5e9",
+    color: "#fff",
+    border: "1px solid #38bdf8",
+  },
   body: {
     flex: 1,
     overflowY: "auto",
@@ -267,6 +599,17 @@ const styles = {
     background: "#7f1d1d",
     color: "#fecaca",
     border: "1px solid #f87171",
+  },
+  listenBtn: {
+    display: "block",
+    marginTop: 6,
+    background: "transparent",
+    color: "#94a3b8",
+    border: "1px solid #334155",
+    borderRadius: 12,
+    padding: "2px 9px",
+    fontSize: 11,
+    cursor: "pointer",
   },
   deptTag: {
     marginTop: 8,
@@ -304,6 +647,16 @@ const styles = {
     marginRight: 3,
     animation: "chatbot-blink 1s infinite",
   },
+  voiceError: {
+    alignSelf: "center",
+    background: "#451a03",
+    color: "#fcd34d",
+    border: "1px solid #92400e",
+    borderRadius: 10,
+    padding: "6px 10px",
+    fontSize: 11.5,
+    textAlign: "center",
+  },
   inputRow: {
     display: "flex",
     gap: 8,
@@ -313,6 +666,7 @@ const styles = {
   },
   input: {
     flex: 1,
+    minWidth: 0,
     background: "#1e293b",
     border: "1px solid #334155",
     borderRadius: 20,
@@ -321,9 +675,26 @@ const styles = {
     fontSize: 13,
     outline: "none",
   },
+  micBtn: {
+    width: 36,
+    height: 36,
+    flexShrink: 0,
+    borderRadius: "50%",
+    background: "#1e293b",
+    color: "#fff",
+    border: "1px solid #334155",
+    fontSize: 15,
+    cursor: "pointer",
+  },
+  micBtnActive: {
+    background: "#ef4444",
+    border: "1px solid #fca5a5",
+    animation: "chatbot-pulse 1.2s infinite",
+  },
   sendBtn: {
     width: 36,
     height: 36,
+    flexShrink: 0,
     borderRadius: "50%",
     background: "#0ea5e9",
     color: "#fff",
