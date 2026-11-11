@@ -62,14 +62,30 @@ const cleanForSpeech = (text) =>
 // Indic / Arabic script present? (Bot normally replies in Roman Hinglish.)
 const hasNativeScript = (text) => /[ऀ-෿؀-ۿ]/.test(text);
 
+// Prefer natural-sounding voices: Edge "Online (Natural)" neural voices and
+// Chrome "Google" network voices sound far less robotic than the offline
+// default voices (e.g. Microsoft Heera / Kalpana).
+const voiceScore = (v) => {
+  const n = v.name.toLowerCase();
+  let score = 0;
+  if (n.includes("natural") || n.includes("neural")) score += 100;
+  if (n.includes("online")) score += 40;
+  if (n.includes("google")) score += 60;
+  if (n.includes("swara") || n.includes("madhur")) score += 20; // hi-IN neural voices
+  if (v.localService) score -= 10;
+  return score;
+};
+
 const pickVoice = (langCode) => {
   if (!synth) return null;
   const voices = synth.getVoices();
   const norm = (s) => s.replace("_", "-").toLowerCase();
   const target = norm(langCode);
+  const best = (list) =>
+    list.sort((a, b) => voiceScore(b) - voiceScore(a))[0] || null;
   return (
-    voices.find((v) => norm(v.lang) === target) ||
-    voices.find((v) => norm(v.lang).startsWith(target.split("-")[0])) ||
+    best(voices.filter((v) => norm(v.lang) === target)) ||
+    best(voices.filter((v) => norm(v.lang).startsWith(target.split("-")[0]))) ||
     null
   );
 };
@@ -161,12 +177,18 @@ export default function ChatWidget() {
 
     synth.cancel();
     const u = new SpeechSynthesisUtterance(clean);
-    // Roman-script Hinglish reads best with an Indian-English voice;
-    // native-script text uses the app's selected language.
-    u.lang = hasNativeScript(clean) ? recogLangRef.current : "en-IN";
-    const voice = pickVoice(u.lang);
+    // Bot replies in Hinglish. A Hindi voice pronounces Hindi words naturally
+    // (an English voice sounds robotic on them). If the app is set to another
+    // Indian language and the text is in that script, use that language.
+    u.lang = hasNativeScript(clean) ? recogLangRef.current : "hi-IN";
+    let voice = pickVoice(u.lang);
+    if (!voice && u.lang !== "en-IN") {
+      u.lang = "en-IN"; // no Hindi voice installed → fall back to English
+      voice = pickVoice(u.lang);
+    }
     if (voice) u.voice = voice;
-    u.rate = 0.95;
+    u.rate = 1;
+    u.pitch = 1;
     u.onstart = () => setSpeakingIdx(idx);
     u.onend = () => setSpeakingIdx((cur) => (cur === idx ? null : cur));
     u.onerror = () => setSpeakingIdx((cur) => (cur === idx ? null : cur));
