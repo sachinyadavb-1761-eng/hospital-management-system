@@ -9,7 +9,7 @@
 // No extra npm package, API key or backend change is needed.
 // Note: the mic needs HTTPS (localhost is fine for development).
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { chatbotAPI } from "../services/api";
 import { isLoggedIn } from "../utils/auth";
@@ -119,6 +119,8 @@ export default function ChatWidget() {
   const scrollRef = useRef(null);
   const recognitionRef = useRef(null);
   const cancelledRef = useRef(false); // true when we stop the mic on purpose (don't auto-send)
+  const audioRef = useRef(null); // currently playing Gemini voice (HTMLAudioElement)
+  const speakIdRef = useRef(0); // lets us ignore stale voice responses after Stop
 
   // Refs let the long-lived speech callbacks always see fresh values
   const messagesRef = useRef(messages);
@@ -149,15 +151,20 @@ export default function ChatWidget() {
     return () => synth.removeEventListener?.("voiceschanged", warm);
   }, []);
 
-  // Stop mic + speech when widget is closed or unmounted
-  useEffect(() => {
-    if (!open) stopAllVoice();
-  }, [open]);
+  // Stops both the Gemini voice and the browser voice, and cancels in-flight requests
+  const stopSpeaking = useCallback(() => {
+    speakIdRef.current += 1;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      URL.revokeObjectURL(audioRef.current.src);
+      audioRef.current = null;
+    }
+    synth?.cancel();
+    setSpeakingIdx(null);
+  }, []);
 
-  useEffect(() => () => stopAllVoice(), []);
-
-  // ── Voice helpers ──────────────────────────────────────────────────────────
-  function stopAllVoice() {
+  // Stops the mic AND all speech
+  const stopAllVoice = useCallback(() => {
     cancelledRef.current = true;
     try {
       recognitionRef.current?.abort();
@@ -166,24 +173,30 @@ export default function ChatWidget() {
     }
     recognitionRef.current = null;
     setListening(false);
-    synth?.cancel();
-    setSpeakingIdx(null);
-  }
+    stopSpeaking();
+  }, [stopSpeaking]);
 
-  const speak = (text, idx) => {
-    if (!synth) return;
-    const clean = cleanForSpeech(text);
-    if (!clean) return;
+  // Stop mic + speech when widget is closed or unmounted
+  useEffect(() => {
+    if (!open) stopAllVoice();
+  }, [open, stopAllVoice]);
 
+  useEffect(() => () => stopAllVoice(), [stopAllVoice]);
+
+  // ── Voice helpers ──────────────────────────────────────────────────────────
+  // Browser voice - robotic, used only as a fallback when Gemini voice fails
+  const speakWithBrowser = (clean, idx) => {
+    if (!synth) {
+      setSpeakingIdx(null);
+      return;
+    }
     synth.cancel();
     const u = new SpeechSynthesisUtterance(clean);
-    // Bot replies in Hinglish. A Hindi voice pronounces Hindi words naturally
-    // (an English voice sounds robotic on them). If the app is set to another
-    // Indian language and the text is in that script, use that language.
+    // A Hindi voice pronounces Hinglish far better than an English one
     u.lang = hasNativeScript(clean) ? recogLangRef.current : "hi-IN";
     let voice = pickVoice(u.lang);
     if (!voice && u.lang !== "en-IN") {
-      u.lang = "en-IN"; // no Hindi voice installed → fall back to English
+      u.lang = "en-IN"; // no Hindi voice installed -> fall back to English
       voice = pickVoice(u.lang);
     }
     if (voice) u.voice = voice;
@@ -195,10 +208,40 @@ export default function ChatWidget() {
     synth.speak(u);
   };
 
+  // Natural voice from the backend (Gemini TTS); falls back to the browser voice
+  const speak = async (text, idx) => {
+    const clean = cleanForSpeech(text);
+    if (!clean) return;
+
+    stopSpeaking();
+    const myId = speakIdRef.current;
+    setSpeakingIdx(idx); // shows "Stop" while the voice is being generated
+
+    try {
+      const res = await chatbotAPI.speak(clean);
+      if (myId !== speakIdRef.current) return; // user pressed Stop / started something else
+
+      const url = URL.createObjectURL(res.data);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      const done = () => {
+        URL.revokeObjectURL(url);
+        if (audioRef.current === audio) audioRef.current = null;
+        setSpeakingIdx((cur) => (cur === idx ? null : cur));
+      };
+      audio.onended = done;
+      audio.onerror = done;
+      await audio.play();
+    } catch {
+      if (myId !== speakIdRef.current) return;
+      audioRef.current = null;
+      speakWithBrowser(clean, idx);
+    }
+  };
+
   const toggleSpeakMessage = (text, idx) => {
     if (speakingIdx === idx) {
-      synth?.cancel();
-      setSpeakingIdx(null);
+      stopSpeaking();
     } else {
       speak(text, idx);
     }
@@ -207,8 +250,7 @@ export default function ChatWidget() {
   const startListening = () => {
     if (!SpeechRecognitionAPI || loadingRef.current) return;
 
-    synth?.cancel(); // don't let the mic hear the bot talking
-    setSpeakingIdx(null);
+    stopSpeaking(); // don't let the mic hear the bot talking
     setVoiceError("");
     cancelledRef.current = false;
 
@@ -271,10 +313,7 @@ export default function ChatWidget() {
 
   const toggleSpeakReplies = () => {
     setSpeakReplies((v) => {
-      if (v) {
-        synth?.cancel();
-        setSpeakingIdx(null);
-      }
+      if (v) stopSpeaking();
       return !v;
     });
   };
@@ -376,25 +415,23 @@ export default function ChatWidget() {
               </div>
             </div>
 
-            {synth && (
-              <button
-                type="button"
-                onClick={toggleSpeakReplies}
-                style={{
-                  ...styles.speakToggle,
-                  ...(speakReplies ? styles.speakToggleOn : {}),
-                }}
-                title={
-                  speakReplies
-                    ? "Replies are read aloud (tap to mute)"
-                    : "Read replies aloud"
-                }
-                aria-label="Toggle reading replies aloud"
-                aria-pressed={speakReplies}
-              >
-                {speakReplies ? "🔊" : "🔇"}
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={toggleSpeakReplies}
+              style={{
+                ...styles.speakToggle,
+                ...(speakReplies ? styles.speakToggleOn : {}),
+              }}
+              title={
+                speakReplies
+                  ? "Replies are read aloud (tap to mute)"
+                  : "Read replies aloud"
+              }
+              aria-label="Toggle reading replies aloud"
+              aria-pressed={speakReplies}
+            >
+              {speakReplies ? "🔊" : "🔇"}
+            </button>
           </div>
 
           <div style={styles.body} ref={scrollRef}>
@@ -417,7 +454,7 @@ export default function ChatWidget() {
                 >
                   {m.content}
 
-                  {m.role === "assistant" && synth && (
+                  {m.role === "assistant" && (
                     <button
                       type="button"
                       onClick={() => toggleSpeakMessage(m.content, i)}

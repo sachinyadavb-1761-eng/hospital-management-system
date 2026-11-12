@@ -139,3 +139,108 @@ export const sendMessage = async (req, res) => {
     });
   }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VOICE — POST /api/chatbot/speak
+// Turns a bot reply into natural-sounding speech with Gemini TTS, so the voice
+// is the same on every browser (the browser's built-in voices sound robotic).
+// Returns audio/wav. If anything fails the frontend falls back to the
+// browser voice, so this endpoint is allowed to fail.
+// ─────────────────────────────────────────────────────────────────────────────
+const TTS_MODELS = [
+  process.env.GEMINI_TTS_MODEL || "gemini-3.8-flash-tts",
+  "gemini-3.1-flash-tts-preview", // fallback if the first model is unavailable
+];
+const TTS_VOICE = process.env.GEMINI_TTS_VOICE || "Kore";
+const TTS_STYLE =
+  process.env.GEMINI_TTS_STYLE ||
+  "warm, calm and friendly, like a caring hospital receptionist speaking natural Hindi";
+const TTS_MAX_CHARS = 600;
+
+// Tiny in-memory cache (same text → same audio, e.g. the greeting) saves cost
+const ttsCache = new Map();
+const TTS_CACHE_MAX = 50;
+
+// Public route + paid API → simple per-IP rate limit (20 requests / minute)
+const ttsHits = new Map();
+function ttsRateLimited(ip) {
+  const now = Date.now();
+  const recent = (ttsHits.get(ip) || []).filter((t) => now - t < 60_000);
+  recent.push(now);
+  ttsHits.set(ip, recent);
+  if (ttsHits.size > 5000) ttsHits.clear(); // keep memory bounded
+  return recent.length > 20;
+}
+
+function cleanForTTS(text) {
+  return String(text || "")
+    .replace(/\p{Extended_Pictographic}/gu, "")
+    .replace(/\uFE0F/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, TTS_MAX_CHARS);
+}
+
+async function generateSpeech(model, text) {
+  const client = getGeminiClient();
+  const interaction = await client.interactions.create({
+    model,
+    input: [
+      {
+        type: "user_input",
+        content: [
+          {
+            type: "text",
+            text,
+            // Delivery style goes here — NOT in the text, or it gets read aloud
+            annotations: [{ type: "speech_metadata", style: TTS_STYLE }],
+          },
+        ],
+      },
+    ],
+    response_format: { type: "audio" },
+    generation_config: { speech_config: [{ voice: TTS_VOICE }] },
+  });
+
+  const data = interaction.output_audio?.data;
+  if (!data) throw new Error("No audio returned by Gemini");
+  return Buffer.from(data, "base64"); // WAV (24 kHz, mono, 16-bit)
+}
+
+export const textToSpeech = async (req, res) => {
+  try {
+    if (ttsRateLimited(req.ip)) {
+      return res.status(429).json({ message: "Too many voice requests" });
+    }
+
+    const text = cleanForTTS(req.body?.text);
+    if (!text) return res.status(400).json({ message: "Text is required" });
+
+    let audio = ttsCache.get(text);
+    if (!audio) {
+      let lastErr;
+      for (const model of TTS_MODELS) {
+        try {
+          audio = await generateSpeech(model, text);
+          break;
+        } catch (err) {
+          lastErr = err;
+          console.error(`TTS failed on ${model}:`, err.message);
+        }
+      }
+      if (!audio) throw lastErr;
+
+      if (ttsCache.size >= TTS_CACHE_MAX) {
+        ttsCache.delete(ttsCache.keys().next().value); // drop oldest
+      }
+      ttsCache.set(text, audio);
+    }
+
+    res.set("Content-Type", "audio/wav");
+    res.set("Cache-Control", "private, max-age=3600");
+    res.send(audio);
+  } catch (error) {
+    console.error("Chatbot TTS error:", error);
+    res.status(500).json({ message: "Voice generation failed" });
+  }
+};

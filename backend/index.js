@@ -15,6 +15,7 @@ import chatbotRoutes from "./routes/chatbotRoutes.js";
 // 1. Configs
 dotenv.config();
 const app = express();
+app.set("trust proxy", 1); // behind Render's proxy -> real client IP for rate limiting
 
 // 2. CORS — Vercel frontend allow karo
 app.use(
@@ -47,14 +48,42 @@ const seedDepartments = async () => {
   const count = await Department.countDocuments();
   if (count > 0) return;
   const defaults = [
-    { name: "Cardiology", icon: "❤️", description: "Heart and cardiovascular system" },
-    { name: "Neurology", icon: "🧠", description: "Brain, spinal cord and nervous system" },
-    { name: "Orthopedics", icon: "🦴", description: "Bones, joints and musculoskeletal system" },
-    { name: "Pediatrics", icon: "👶", description: "Medical care for infants, children and adolescents" },
-    { name: "Dermatology", icon: "🔬", description: "Skin, hair and nail disorders" },
-    { name: "General Medicine", icon: "🏥", description: "Primary care and internal medicine" },
+    {
+      name: "Cardiology",
+      icon: "❤️",
+      description: "Heart and cardiovascular system",
+    },
+    {
+      name: "Neurology",
+      icon: "🧠",
+      description: "Brain, spinal cord and nervous system",
+    },
+    {
+      name: "Orthopedics",
+      icon: "🦴",
+      description: "Bones, joints and musculoskeletal system",
+    },
+    {
+      name: "Pediatrics",
+      icon: "👶",
+      description: "Medical care for infants, children and adolescents",
+    },
+    {
+      name: "Dermatology",
+      icon: "🔬",
+      description: "Skin, hair and nail disorders",
+    },
+    {
+      name: "General Medicine",
+      icon: "🏥",
+      description: "Primary care and internal medicine",
+    },
     { name: "ENT", icon: "👂", description: "Ear, nose and throat disorders" },
-    { name: "Gynecology", icon: "🌸", description: "Women's reproductive health" },
+    {
+      name: "Gynecology",
+      icon: "🌸",
+      description: "Women's reproductive health",
+    },
   ];
   await Department.insertMany(defaults);
   console.log("✅ Default departments seeded");

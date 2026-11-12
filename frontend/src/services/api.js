@@ -118,5 +118,12 @@ export const paymentAPI = {
 export const chatbotAPI = {
   sendMessage: (message, history) =>
     api.post("/chatbot/message", { message, history }),
+  // Natural-sounding voice (Gemini TTS) -> returns an audio/wav Blob
+  speak: (text) =>
+    api.post(
+      "/chatbot/speak",
+      { text },
+      { responseType: "blob", timeout: 20000 },
+    ),
 };
 export default api;
